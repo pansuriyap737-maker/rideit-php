@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // Fetch user name (for welcome)
 $userId = $_SESSION['user_id'];
-$query = mysqli_query($conn, "SELECT name FROM users WHERE id = $userId");
+$query = mysqli_query($conn, "SELECT name FROM pessanger WHERE id = $userId");
 $user = mysqli_fetch_assoc($query);
 $userName = $user ? $user['name'] : 'User';
 ?>

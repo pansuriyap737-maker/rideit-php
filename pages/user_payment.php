@@ -26,7 +26,7 @@ $query = "
     INNER JOIN 
         cars c ON p.car_id = c.car_id
     INNER JOIN 
-        users u ON p.user_id = u.id
+        pessanger u ON c.user_id = u.id
     WHERE 
         c.user_id = $user_id AND p.user_id != $user_id
     ORDER BY 

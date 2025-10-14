@@ -6,6 +6,7 @@ $error = "";
 $success = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $registerType = isset($_POST['register_type']) ? trim($_POST['register_type']) : '';
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
     $contact = trim($_POST['contact']);
@@ -16,27 +17,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($password !== $confirm_password) {
         $error = "Passwords do not match.";
     } else {
-        // Check if username exists
-        $check_name = mysqli_query($conn, "SELECT * FROM users WHERE name = '$name'");
-        if (mysqli_num_rows($check_name) > 0) {
-            $error = "Username already taken. Please choose another.";
-        } else {
-            // Check if email exists
-            $check_email = mysqli_query($conn, "SELECT * FROM users WHERE email = '$email'");
-            if (mysqli_num_rows($check_email) > 0) {
-                $error = "Email already registered.";
+        if ($registerType === 'pessenger') {
+            // Register into `pessenger` table
+            $check_name = mysqli_query($conn, "SELECT * FROM pessanger WHERE name = '$name'");
+            if ($check_name && mysqli_num_rows($check_name) > 0) {
+                $error = "Username already taken. Please choose another.";
             } else {
-                // Hash password
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-                // Insert user into DB
-                $insert = mysqli_query($conn, "INSERT INTO users (name, email, contact, password, role) VALUES ('$name', '$email', '$contact', '$hashed_password', 'user')");
-
-                if ($insert) {
-                    $success = "Registration successful! Redirecting to <a href='login.php'>Login</a>...";
-                    echo "<script>setTimeout(() => { window.location.href = 'login.php'; }, 3000);</script>";
+                $check_email = mysqli_query($conn, "SELECT * FROM pessanger WHERE email = '$email'");
+                if ($check_email && mysqli_num_rows($check_email) > 0) {
+                    $error = "Email already registered.";
                 } else {
-                    $error = "Something went wrong. Try again.";
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $insert = mysqli_query($conn, "INSERT INTO pessanger (name, email, contact, password) VALUES ('$name', '$email', '$contact', '$hashed_password')");
+                    if ($insert) {
+                        $success = "Registration successful! Redirecting to <a href='login.php'>Login</a>...";
+                        echo "<script>setTimeout(() => { window.location.href = 'login.php'; }, 3000);</script>";
+                    } else {
+                        $error = "Something went wrong. Try again.";
+                    }
+                }
+            }
+        } else {
+            // Driver or other fallback -> `users` table with role
+            $check_name = mysqli_query($conn, "SELECT * FROM users WHERE name = '$name'");
+            if ($check_name && mysqli_num_rows($check_name) > 0) {
+                $error = "Username already taken. Please choose another.";
+            } else {
+                $check_email = mysqli_query($conn, "SELECT * FROM users WHERE email = '$email'");
+                if ($check_email && mysqli_num_rows($check_email) > 0) {
+                    $error = "Email already registered.";
+                } else {
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $role = ($registerType === 'driver') ? 'driver' : 'user';
+                    $insert = mysqli_query($conn, "INSERT INTO users (name, email, contact, password, role) VALUES ('$name', '$email', '$contact', '$hashed_password', '$role')");
+                    if ($insert) {
+                        $success = "Registration successful! Redirecting to <a href='login.php'>Login</a>...";
+                        echo "<script>setTimeout(() => { window.location.href = 'login.php'; }, 3000);</script>";
+                    } else {
+                        $error = "Something went wrong. Try again.";
+                    }
                 }
             }
         }
@@ -157,9 +176,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </div>
 
-        <button type="submit" class="submit-btn">Register</button>
+        <button type="submit" name="register_type" value="pessenger" class="submit-btn pessenger">Register</button>
         <p style="display: block; text-align: center; margin: 10px;">Or</p>
-        <button type="submit" class="submit-btn">Register as a Driver</button>
+        <button type="submit" name="register_type" value="driver" class="submit-btn">Register as a Driver</button>
     </form>
 
     <p style="margin-top: 15px;">Already have an account? <a href="login.php">Login here</a></p>

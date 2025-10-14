@@ -4,6 +4,19 @@ include('admin_header.php');
 include('../config.php'); // Assuming this has your database connection
 
 ?>
+<?php
+// Count total passengers from `pessanger`
+$totalUsers = 0;
+$countResult = mysqli_query($conn, "SELECT COUNT(*) AS cnt FROM pessanger");
+if ($countResult) {
+	$row = mysqli_fetch_assoc($countResult);
+	$totalUsers = (int)$row['cnt'];
+}
+
+// Server-side search term
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$searchEsc = mysqli_real_escape_string($conn, $search);
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -135,19 +148,20 @@ include('../config.php'); // Assuming this has your database connection
 </head>
 <body>
     <div class="user-info-container">
-        <h2>Manage Passengers</h2>
+        <h2>Manage Passengers (Total: <?php echo $totalUsers; ?>)</h2>
 
 
         <div class="top-bar">
-            <form class="search-bar" onsubmit="return false;"> 
+            <form class="search-bar" method="get"> 
                 <input
                     type="text"
                     name="search"
                     placeholder="Search name, email, or contact"
                     id="search-input"
                     class="search-user"
+                    value="<?php echo htmlspecialchars($search); ?>"
                 />
-                <button type="button" onclick="filterUsers()" class="search-user-btn">Search</button>
+                <button type="submit" class="search-user-btn">Search</button>
             </form>
         </div>
 
@@ -163,22 +177,50 @@ include('../config.php'); // Assuming this has your database connection
                 </tr>
             </thead>
             <tbody>
-                        <tr>
-                            <td>Ronit Kakadiya</td>
-                            <td>abc@gmail.com</td>
-                            <td>7864534267</td>
-                            <td>
-                                <span>Active</span>                                  
-                            </td>
-                            <td>12/05/2025</td>
-                            <td>
-                                <button 
-                                    class="diactivate" 
-                                  >
-                                Deactivate</button>
-                                
-                            </td>
-        </tr>
+                <?php
+                // Fetch passengers from `pessanger`, with optional search
+                $where = "";
+                if ($searchEsc !== '') {
+                    $like = "%$searchEsc%";
+                    $where = "WHERE (name LIKE '" . $like . "' OR email LIKE '" . $like . "' OR contact LIKE '" . $like . "')";
+                }
+                $sql = "SELECT id, name, email, contact, created_at FROM pessanger $where ORDER BY id DESC";
+                $result = mysqli_query($conn, $sql);
+                if ($result && mysqli_num_rows($result) > 0) {
+                    while ($row = mysqli_fetch_assoc($result)) {
+                        $id = $row['id'];
+                        $name = htmlspecialchars($row['name']);
+                        $email = htmlspecialchars($row['email']);
+                        $contact = htmlspecialchars($row['contact']);
+                        $status = 'active';
+                        $createdAt = isset($row['created_at']) ? date('d/m/Y', strtotime($row['created_at'])) : '';
+                        echo "<tr>";
+                        echo "<td>{$name}</td>";
+                        echo "<td>{$email}</td>";
+                        echo "<td>{$contact}</td>";
+                        echo "<td><span>" . ucfirst($status) . "</span></td>";
+                        echo "<td>{$createdAt}</td>";
+                        echo "<td>";
+                        if ($status === 'active') {
+                            echo "<form method='post' style='display:inline-block;' action='user_status_toggle.php'>";
+                            echo "<input type='hidden' name='id' value='{$id}'>";
+                            echo "<input type='hidden' name='new_status' value='inactive'>";
+                            echo "<button type='submit' class='diactivate'>Deactivate</button>";
+                            echo "</form>";
+                        } else {
+                            echo "<form method='post' style='display:inline-block;' action='user_status_toggle.php'>";
+                            echo "<input type='hidden' name='id' value='{$id}'>";
+                            echo "<input type='hidden' name='new_status' value='active'>";
+                            echo "<button type='submit' class='activate'>Activate</button>";
+                            echo "</form>";
+                        }
+                        echo "</td>";
+                        echo "</tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='6' class='no-users'>No passengers found.</td></tr>";
+                }
+                ?>
             </tbody>
         </table>
     </div>

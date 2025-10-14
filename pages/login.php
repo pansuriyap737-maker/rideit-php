@@ -1,6 +1,5 @@
 <?php
 session_start();
-include('../includes/header.php');
 include('../config.php');
 
 
@@ -9,50 +8,99 @@ $error = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
+    $loginType = isset($_POST['login_type']) ? trim($_POST['login_type']) : '';
 
-    // Check if the email is for an admin
-    $sql_admin = "SELECT * FROM admin WHERE email = '$email'";
-    $result_admin = mysqli_query($conn, $sql_admin);
+    // Helper: check if a table exists in current database
+    function table_exists($conn, $tableName) {
+        $t = mysqli_real_escape_string($conn, $tableName);
+        $sql = "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '$t'";
+        $res = mysqli_query($conn, $sql);
+        return $res && mysqli_num_rows($res) > 0;
+    }
 
-    if ($result_admin && mysqli_num_rows($result_admin) == 1) {
-        $admin = mysqli_fetch_assoc($result_admin);
-        if (password_verify($password, $admin['password'])) {
-            $_SESSION['admin_id'] = $admin['admin_id'];
-            $_SESSION['admin_username'] = $admin['username'];
-            $_SESSION['admin_name'] = $admin['first_name'] . ' ' . $admin['last_name'];
-
-            header("Location: ../admin/admin_dashboard.php");
-            exit();
+    if ($loginType === 'pessenger') {
+        // Prefer 'pessanger' table if present; otherwise fallback to users with role 'user'
+        if (table_exists($conn, 'pessanger')) {
+            $sql = "SELECT * FROM pessanger WHERE email = '$email'";
+            $res = mysqli_query($conn, $sql);
+            if ($res && mysqli_num_rows($res) == 1) {
+                $row = mysqli_fetch_assoc($res);
+                if (password_verify($password, $row['password'])) {
+                    $_SESSION['user_id'] = isset($row['id']) ? $row['id'] : $row['user_id'];
+                    $_SESSION['user_role'] = 'user';
+                    $_SESSION['user_name'] = $row['name'];
+                    header("Location: user_dashboard.php");
+                    exit();
+                } else {
+                    $error = "Invalid password.";
+                }
+            } else {
+                $error = "User not found.";
+            }
         } else {
-            $error = "Invalid password.";
+            // Fallback to users table (role user)
+            $sql_user = "SELECT * FROM users WHERE email = '$email' AND role = 'user'";
+            $result_user = mysqli_query($conn, $sql_user);
+            if ($result_user && mysqli_num_rows($result_user) == 1) {
+                $user = mysqli_fetch_assoc($result_user);
+                if (password_verify($password, $user['password'])) {
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_role'] = $user['role'];
+                    $_SESSION['user_name'] = $user['name'];
+                    header("Location: user_dashboard.php");
+                    exit();
+                } else {
+                    $error = "Invalid password.";
+                }
+            } else {
+                $error = "User not found.";
+            }
         }
     } else {
-        // Check if the email is for a regular user
-        $sql_user = "SELECT * FROM users WHERE email = '$email'";
-        $result_user = mysqli_query($conn, $sql_user);
+        // Original admin + general users flow
+        $sql_admin = "SELECT * FROM admin WHERE email = '$email'";
+        $result_admin = mysqli_query($conn, $sql_admin);
 
-        if ($result_user && mysqli_num_rows($result_user) == 1) {
-            $user = mysqli_fetch_assoc($result_user);
-            if (password_verify($password, $user['password'])) {
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_role'] = $user['role'];
-                $_SESSION['user_name'] = $user['name'];
+        if ($result_admin && mysqli_num_rows($result_admin) == 1) {
+            $admin = mysqli_fetch_assoc($result_admin);
+            if (password_verify($password, $admin['password'])) {
+                $_SESSION['admin_id'] = $admin['admin_id'];
+                $_SESSION['admin_username'] = $admin['username'];
+                $_SESSION['admin_name'] = $admin['first_name'] . ' ' . $admin['last_name'];
 
-                if ($user['role'] === 'admin') {
-                    header("Location: ../admin/admin_dashboard.php");
-                } else {
-                    header("Location: user_dashboard.php");
-                }
+                header("Location: ../admin/admin_dashboard.php");
                 exit();
             } else {
                 $error = "Invalid password.";
             }
         } else {
-            $error = "User not found.";
+            $sql_user = "SELECT * FROM users WHERE email = '$email'";
+            $result_user = mysqli_query($conn, $sql_user);
+
+            if ($result_user && mysqli_num_rows($result_user) == 1) {
+                $user = mysqli_fetch_assoc($result_user);
+                if (password_verify($password, $user['password'])) {
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_role'] = $user['role'];
+                    $_SESSION['user_name'] = $user['name'];
+
+                    if ($user['role'] === 'admin') {
+                        header("Location: ../admin/admin_dashboard.php");
+                    } else {
+                        header("Location: user_dashboard.php");
+                    }
+                    exit();
+                } else {
+                    $error = "Invalid password.";
+                }
+            } else {
+                $error = "User not found.";
+            }
         }
     }
 }
 ?>
+<?php include('../includes/header.php'); ?>
 
 <style>
     *{
@@ -152,9 +200,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
             </div>
 
-            <button type="submit" class="submit-btn">Login</button>
+            <button type="submit" name="login_type" value="pessenger" class="submit-btn pessenger">Login</button>
             <p style=" margin: 10px; text-align: center; ">Or</p>
-            <button type="submit" class="submit-btn">Login as a Driver</button>
+            <button type="submit" name="login_type" value="driver" class="submit-btn">Login as a Driver</button>
         </form>
 
         <p class="register-link">Don't have an account? <a href="register.php">Register here</a></p>

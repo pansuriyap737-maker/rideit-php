@@ -3,6 +3,19 @@ session_start();
 include('../config.php'); // Assuming this has your database connection
 include('admin_header.php');
 ?>
+<?php
+// Count total deactivated passengers
+$totalDeactivated = 0;
+$cntRes = mysqli_query($conn, "SELECT COUNT(*) AS cnt FROM deactivatedpesenger");
+if ($cntRes) {
+	$cntRow = mysqli_fetch_assoc($cntRes);
+	$totalDeactivated = (int)$cntRow['cnt'];
+}
+
+// Server-side search term
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$searchEsc = mysqli_real_escape_string($conn, $search);
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -120,18 +133,19 @@ include('admin_header.php');
 </head>
 <body>
     <div class="user-info-container">
-        <h2 class="manages-user-title">Deactivated Passengers</h2>
+        <h2 class="manages-user-title">Deactivated Passengers (Total: <?php echo $totalDeactivated; ?>)</h2>
 
         <div class="top-bar">
-            <form class="search-bar" onsubmit="return false;">
+            <form class="search-bar" method="get">
                 <input
                     type="text"
                     name="search"
                     placeholder="Search deactivated users by name, email, or phone"
                     id="search-input"
                     class="search-user"
+                    value="<?php echo htmlspecialchars($search); ?>"
                 />
-                <button type="button" onclick="filterUsers()" class="search-user-btn">Search</button>
+                <button type="submit" class="search-user-btn">Search</button>
             </form>
         </div>
 
@@ -147,20 +161,40 @@ include('admin_header.php');
                 </tr>
             </thead>
             <tbody>
-                        <tr>
-                            <td>Vatsal Sabhaya</td>
-                            <td>mnb@gmail.com</td>
-                            <td>9067435675</td>
-                            <td>
-                                <span>Deactivated</span>
-                            </td>
-                            <td>12/10/2025</td>
-                            <td>
-                                <button class="activate" onclick="reactivateUser('<?php echo $user['id']; ?>')">
-                                    Reactivate
-                                </button>
-                            </td>
-                        </tr>
+                <?php
+                $where = "";
+                if ($searchEsc !== '') {
+                    $like = "%$searchEsc%";
+                    $where = "WHERE (name LIKE '" . $like . "' OR email LIKE '" . $like . "' OR contact LIKE '" . $like . "')";
+                }
+                $sql = "SELECT user_id, name, email, contact, deactivated_at FROM deactivatedpesenger $where ORDER BY deactivated_at DESC";
+                $res = mysqli_query($conn, $sql);
+                if ($res && mysqli_num_rows($res) > 0) {
+                    while ($row = mysqli_fetch_assoc($res)) {
+                        $uid = (int)$row['user_id'];
+                        $name = htmlspecialchars($row['name']);
+                        $email = htmlspecialchars($row['email']);
+                        $contact = htmlspecialchars($row['contact']);
+                        $deact = $row['deactivated_at'] ? date('d/m/Y', strtotime($row['deactivated_at'])) : '';
+                        echo "<tr>";
+                        echo "<td>{$name}</td>";
+                        echo "<td>{$email}</td>";
+                        echo "<td>{$contact}</td>";
+                        echo "<td><span>Deactivated</span></td>";
+                        echo "<td>{$deact}</td>";
+                        echo "<td>";
+                        echo "<form method='post' action='user_status_toggle.php' style='display:inline-block;'>";
+                        echo "<input type='hidden' name='id' value='{$uid}'>";
+                        echo "<input type='hidden' name='new_status' value='active'>";
+                        echo "<button type='submit' class='activate'>Reactivate</button>";
+                        echo "</form>";
+                        echo "</td>";
+                        echo "</tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='6' class='no-users'>No deactivated passengers.</td></tr>";
+                }
+                ?>
             </tbody>
         </table>
     </div>
