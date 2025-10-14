@@ -14,6 +14,13 @@ if ($search !== '') {
 }
 $sql = "SELECT c.* FROM cars c $where ORDER BY c.date_time DESC";
 $cars = mysqli_query($conn, $sql);
+// Count total cars for this driver
+$totalCars = 0;
+$cntRes = mysqli_query($conn, "SELECT COUNT(*) AS cnt FROM cars WHERE user_id = $driverId");
+if ($cntRes) {
+    $cntRow = mysqli_fetch_assoc($cntRes);
+    $totalCars = (int)$cntRow['cnt'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -157,7 +164,7 @@ $cars = mysqli_query($conn, $sql);
 
 <body>
     <div class="ride-list-container">
-        <h3 id="ride-list-heading">Car List</h3>
+        <h3 id="ride-list-heading">Car List (Total: <?php echo $totalCars; ?>)</h3>
         <form method="get" style="margin-bottom: 15px;">
             <input type="search" placeholder="Search by Location, Number Plate and Car Name" class="ride-search"
                 id="search-input" name="search" value="<?php echo htmlspecialchars($search); ?>" />

@@ -22,7 +22,8 @@ include('../config.php');
 </head>
 <body>
 <div class="container">
-    <h2>Manage Cars</h2>
+    <?php $totalCarsRes = mysqli_query($conn, "SELECT COUNT(*) AS cnt FROM cars"); $totalCars = 0; if ($totalCarsRes) { $row = mysqli_fetch_assoc($totalCarsRes); $totalCars = (int)$row['cnt']; } ?>
+    <h2>Manage Cars (Total: <?php echo $totalCars; ?>)</h2>
     <?php
     $res = mysqli_query($conn, "SELECT c.*, COALESCE(c.driver_name, d.name) AS driver_name FROM cars c LEFT JOIN drivers d ON d.id = c.user_id ORDER BY c.created_at DESC");
     ?>
