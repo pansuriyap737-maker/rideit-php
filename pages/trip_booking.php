@@ -27,10 +27,11 @@ if (!empty($date)) {
 $where = !empty($conditions) ? 'WHERE ' . implode(' AND ', $conditions) : '';
 $query = "
     SELECT 
-        c.*, 
+        c.*, COALESCE(c.driver_name, d.name) AS driver_name,
         COALESCE(SUM(CASE WHEN p.payment_status = 'success' THEN 1 ELSE 0 END), 0) AS booked_seats
     FROM 
         cars c
+    LEFT JOIN drivers d ON d.id = c.user_id
     LEFT JOIN 
         payments p ON c.car_id = p.car_id
     $where

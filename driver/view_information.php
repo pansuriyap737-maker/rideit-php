@@ -3,6 +3,18 @@ session_start();
 include('driver_index.php');
 include('../config.php'); // Assuming this has your database connection
 ?>
+<?php
+$driverId = isset($_SESSION['driver_id']) ? (int)$_SESSION['driver_id'] : 0;
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$where = "WHERE c.user_id = $driverId";
+if ($search !== '') {
+	$safe = mysqli_real_escape_string($conn, $search);
+	$like = "%$safe%";
+	$where .= " AND (c.car_name LIKE '" . $like . "' OR c.number_plate LIKE '" . $like . "' OR c.pickup_location LIKE '" . $like . "' OR c.drop_location LIKE '" . $like . "')";
+}
+$sql = "SELECT c.* FROM cars c $where ORDER BY c.date_time DESC";
+$cars = mysqli_query($conn, $sql);
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -146,9 +158,11 @@ include('../config.php'); // Assuming this has your database connection
 <body>
     <div class="ride-list-container">
         <h3 id="ride-list-heading">Car List</h3>
-        <input type="search" placeholder="Search by Location, Number Plate and Car Name" class="ride-search"
-            id="search-input" onkeyup="filterTrips()" />
-        <button class="ride-search-btn" type="button" onclick="filterTrips()">Search</button>
+        <form method="get" style="margin-bottom: 15px;">
+            <input type="search" placeholder="Search by Location, Number Plate and Car Name" class="ride-search"
+                id="search-input" name="search" value="<?php echo htmlspecialchars($search); ?>" />
+            <button class="ride-search-btn" type="submit">Search</button>
+        </form>
 
         <table id="trips-table"> <!-- ID for JavaScript filtering -->
             <thead>
@@ -165,51 +179,37 @@ include('../config.php'); // Assuming this has your database connection
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>Car Image</td>
-                    <td>Hyundai</td>
-                    <td>GJ05TV3451</td>
-                    <td>3</td>
-                    <td>Jakatnaka</td>
-                    <td>Pasodara</td>
-                    <td>12/10</td>
-                    <td>₹100 </td>
-                    <td>
-                        <button class="edit-btn-rides"
-                            onclick="alert('Edit trip ID: <?php echo $trip['id']; ?>')">Edit</button>
-                        <button class="delete-btn-rides"
-                            onclick="if(confirm('Are you sure?')) { alert('Delete trip ID: <?php echo $trip['id']; ?>'); }">Delete</button>
-                    </td>
-                </tr>
+                <?php if ($cars && mysqli_num_rows($cars) > 0): ?>
+                    <?php while ($car = mysqli_fetch_assoc($cars)): ?>
+                        <tr>
+                            <td>
+                                <?php if (!empty($car['car_image'])): ?>
+                                    <img src="../uploads/<?php echo htmlspecialchars($car['car_image']); ?>" class="car-image" alt="Car">
+                                <?php else: ?>
+                                    N/A
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo htmlspecialchars($car['car_name']); ?></td>
+                            <td><?php echo htmlspecialchars($car['number_plate']); ?></td>
+                            <td><?php echo htmlspecialchars($car['seating']); ?></td>
+                            <td><?php echo htmlspecialchars($car['pickup_location']); ?></td>
+                            <td><?php echo htmlspecialchars($car['drop_location']); ?></td>
+                            <td><?php echo $car['date_time'] ? date('d/m/Y H:i', strtotime($car['date_time'])) : ''; ?></td>
+                            <td>₹<?php echo number_format($car['amount'], 2); ?></td>
+                            <td>
+                                <a class="edit-btn-rides" href="edit_car.php?id=<?php echo (int)$car['car_id']; ?>">Edit</a>
+                                <a class="delete-btn-rides" href="delete_car.php?id=<?php echo (int)$car['car_id']; ?>" onclick="return confirm('Delete this trip?');">Delete</a>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <tr><td colspan="9" class="no-cars">No trips found.</td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
 
-    <script>
-        function filterTrips() {
-            var input, filter, table, tr, td, i, j, txtValue;
-            input = document.getElementById("search-input");
-            filter = input.value.toLowerCase();
-            table = document.getElementById("trips-table");
-            tr = table.getElementsByTagName("tr");
-
-            for (i = 1; i < tr.length; i++) {  // Start from 1 to skip header
-                tr[i].style.display = "none";  // Hide row by default
-                td = tr[i].getElementsByTagName("td");
-                for (j = 0; j < td.length; j++) {  // Check relevant columns (e.g., 1,2,4,5 for carName, numberPlate, pickup, drop)
-                    if (td[j]) {
-                        if (j === 1 || j === 2 || j === 4 || j === 5) {  // Indices based on table columns
-                            txtValue = td[j].textContent || td[j].innerText;
-                            if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                                tr[i].style.display = "";  // Show if match
-                                break;  // No need to check further
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script></script>
 </body>
 <div class="custom-footer">
         <?php include('../includes/footer.php'); ?>

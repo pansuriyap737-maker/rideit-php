@@ -3,9 +3,16 @@ session_start();
 include('driver_index.php');
 include('../config.php');
 
-// Dummy session user for example
-$user_name = $_SESSION['user_name'] ?? 'Guest';
-$user_id = $_SESSION['user_id'] ?? 0;
+// Get logged-in driver info
+$driverId = isset($_SESSION['driver_id']) ? (int)$_SESSION['driver_id'] : 0;
+$user_name = isset($_SESSION['driver_name']) ? $_SESSION['driver_name'] : 'Driver';
+if ($driverId > 0) {
+	$resDriver = mysqli_query($conn, "SELECT name FROM drivers WHERE id = $driverId");
+	if ($resDriver && mysqli_num_rows($resDriver) === 1) {
+		$rowDriver = mysqli_fetch_assoc($resDriver);
+		$user_name = $rowDriver['name'];
+	}
+}
 
 // Gujarat cities for dropdown (not used anymore, but kept for reference if needed)
 $gujarat_cities = [
@@ -21,7 +28,7 @@ $seating_options = range(1, 8);
 $minDate = date('Y-m-d\TH:i');
 $maxDate = date('Y-m-d\T23:59', strtotime('+90 day'));
 
-$result = mysqli_query($conn, "SELECT * FROM cars WHERE user_id = $user_id ORDER BY date_time DESC");
+$result = mysqli_query($conn, "SELECT * FROM cars WHERE user_id = $driverId ORDER BY date_time DESC");
 ?>
 
 <!DOCTYPE html>
