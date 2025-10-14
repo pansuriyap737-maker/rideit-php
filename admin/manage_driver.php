@@ -4,6 +4,15 @@ include('admin_header.php');
 include('../config.php'); // Assuming this has your database connection
 
 ?>
+<?php
+// Count total drivers
+$totalDrivers = 0;
+$drvCountRes = mysqli_query($conn, "SELECT COUNT(*) AS cnt FROM drivers");
+if ($drvCountRes) {
+	$drvCountRow = mysqli_fetch_assoc($drvCountRes);
+	$totalDrivers = (int)$drvCountRow['cnt'];
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -135,7 +144,7 @@ include('../config.php'); // Assuming this has your database connection
 </head>
 <body>
     <div class="user-info-container">
-        <h2>Manage Driver</h2>
+        <h2>Manage Driver (Total: <?php echo $totalDrivers; ?>)</h2>
 
 
         <div class="top-bar">
@@ -164,23 +173,36 @@ include('../config.php'); // Assuming this has your database connection
                 </tr>
             </thead>
             <tbody>
-                        <tr>
-                            <td>Ronit Kakadiya</td>
-                            <td>abc@gmail.com</td>
-                            <td>7864534267</td>
-                            <td>
-                                <span>Active</span>                                  
-                            </td>
-                            <td>345673</td>
-                            <td>12/05/2025</td>
-                            <td>
-                                <button 
-                                    class="diactivate" 
-                                  >
-                                Deactivate</button>
-                                
-                            </td>
-        </tr>
+                <?php
+                // Fetch drivers from `drivers` table
+                $res = mysqli_query($conn, "SELECT id, name, email, contact, license_no, created_at FROM drivers ORDER BY id DESC");
+                if ($res && mysqli_num_rows($res) > 0) {
+                    while ($row = mysqli_fetch_assoc($res)) {
+                        $name = htmlspecialchars($row['name']);
+                        $email = htmlspecialchars($row['email']);
+                        $contact = htmlspecialchars($row['contact']);
+                        $license = htmlspecialchars($row['license_no']);
+                        $createdAt = isset($row['created_at']) ? date('d/m/Y', strtotime($row['created_at'])) : '';
+                        echo "<tr>";
+                        echo "<td>{$name}</td>";
+                        echo "<td>{$email}</td>";
+                        echo "<td>{$contact}</td>";
+                        echo "<td><span>Active</span></td>";
+                        echo "<td>{$license}</td>";
+                        echo "<td>{$createdAt}</td>";
+                        echo "<td>";
+                        echo "<form method='post' action='driver_status_toggle.php' style='display:inline-block;'>";
+                        echo "<input type='hidden' name='id' value='" . (int)$row['id'] . "'>";
+                        echo "<input type='hidden' name='new_status' value='inactive'>";
+                        echo "<button type='submit' class='diactivate'>Deactivate</button>";
+                        echo "</form>";
+                        echo "</td>";
+                        echo "</tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='7' class='no-users'>No drivers found.</td></tr>";
+                }
+                ?>
             </tbody>
         </table>
     </div>

@@ -12,6 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $contact = trim($_POST['contact']);
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
+    $licenseNo = isset($_POST['license_no']) ? trim($_POST['license_no']) : '';
 
     // Basic validations
     if ($password !== $confirm_password) {
@@ -38,25 +39,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
             }
         } else {
-            // Driver or other fallback -> `users` table with role
-            $check_name = mysqli_query($conn, "SELECT * FROM users WHERE name = '$name'");
-            if ($check_name && mysqli_num_rows($check_name) > 0) {
-                $error = "Username already taken. Please choose another.";
-            } else {
-                $check_email = mysqli_query($conn, "SELECT * FROM users WHERE email = '$email'");
-                if ($check_email && mysqli_num_rows($check_email) > 0) {
-                    $error = "Email already registered.";
+            // Driver registration into `drivers` table with license number
+            if ($registerType === 'driver') {
+                if ($licenseNo === '') {
+                    $error = "Please enter your License Number.";
                 } else {
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $role = ($registerType === 'driver') ? 'driver' : 'user';
-                    $insert = mysqli_query($conn, "INSERT INTO users (name, email, contact, password, role) VALUES ('$name', '$email', '$contact', '$hashed_password', '$role')");
-                    if ($insert) {
-                        $success = "Registration successful! Redirecting to <a href='login.php'>Login</a>...";
-                        echo "<script>setTimeout(() => { window.location.href = 'login.php'; }, 3000);</script>";
+                    // Ensure drivers table exists
+                    $createDrivers = "CREATE TABLE IF NOT EXISTS drivers (
+                        id INT(11) NOT NULL AUTO_INCREMENT,
+                        name VARCHAR(100) DEFAULT NULL,
+                        email VARCHAR(100) DEFAULT NULL,
+                        contact VARCHAR(15) DEFAULT NULL,
+                        password VARCHAR(255) DEFAULT NULL,
+                        license_no VARCHAR(100) DEFAULT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+                        PRIMARY KEY (id),
+                        UNIQUE KEY email (email)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+                    mysqli_query($conn, $createDrivers);
+
+                    $check_name = mysqli_query($conn, "SELECT * FROM drivers WHERE name = '$name'");
+                    if ($check_name && mysqli_num_rows($check_name) > 0) {
+                        $error = "Username already taken. Please choose another.";
                     } else {
-                        $error = "Something went wrong. Try again.";
+                        $check_email = mysqli_query($conn, "SELECT * FROM drivers WHERE email = '$email'");
+                        if ($check_email && mysqli_num_rows($check_email) > 0) {
+                            $error = "Email already registered.";
+                        } else {
+                            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                            $insert = mysqli_query($conn, "INSERT INTO drivers (name, email, contact, password, license_no) VALUES ('$name', '$email', '$contact', '$hashed_password', '$licenseNo')");
+                            if ($insert) {
+                                $success = "Driver registration successful! Redirecting to <a href='login.php'>Login</a>...";
+                                echo "<script>setTimeout(() => { window.location.href = 'login.php'; }, 3000);</script>";
+                            } else {
+                                $error = "Something went wrong. Try again.";
+                            }
+                        }
                     }
                 }
+            } else {
+                // Fallback safety (shouldn't hit)
+                $error = "Invalid registration type.";
             }
         }
     }
@@ -177,8 +200,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 
         <button type="submit" name="register_type" value="pessenger" class="submit-btn pessenger">Register</button>
-        <p style="display: block; text-align: center; margin: 10px;">Or</p>
-        <button type="submit" name="register_type" value="driver" class="submit-btn">Register as a Driver</button>
+        <p id="or-separator" style="display: block; text-align: center; margin: 10px;">Or</p>
+        <div id="driver-extra" style="display: none; margin-bottom: 10px;">
+            <label>License Number:</label><br>
+            <input type="text" name="license_no" id="license_no" class="form-control" placeholder="Enter your License Number">
+        </div>
+        <button type="submit" name="register_type" value="driver" class="submit-btn driver">Register as a Driver</button>
     </form>
 
     <p style="margin-top: 15px;">Already have an account? <a href="login.php">Login here</a></p>
@@ -189,6 +216,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         const input = document.getElementById(id);
         input.type = input.type === "password" ? "text" : "password";
     }
+
+    // Show license field on first click, submit on second click
+    (function() {
+        const driverBtn = document.querySelector('button[name="register_type"][value="driver"]');
+        const licenseDiv = document.getElementById('driver-extra');
+        const licenseInput = document.getElementById('license_no');
+        let revealed = false;
+        if (driverBtn) {
+            driverBtn.addEventListener('click', function(e) {
+                if (!revealed) {
+                    e.preventDefault();
+                    licenseDiv.style.display = 'block';
+                    licenseInput.setAttribute('required', 'required');
+                    revealed = true;
+                    driverBtn.textContent = 'Submit Driver Registration';
+                    // Scroll to the license field for visibility
+                    licenseInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+    })();
 </script>
 
 <?php include('../includes/footer.php'); ?>

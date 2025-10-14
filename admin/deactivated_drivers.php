@@ -3,6 +3,15 @@ session_start();
 include('../config.php'); // Assuming this has your database connection
 include('admin_header.php');
 ?>
+<?php
+// Count total deactivated drivers
+$totalDeactivatedDrivers = 0;
+$cnt = mysqli_query($conn, "SELECT COUNT(*) AS cnt FROM deactivateddrivers");
+if ($cnt) {
+	$row = mysqli_fetch_assoc($cnt);
+	$totalDeactivatedDrivers = (int)$row['cnt'];
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -120,7 +129,7 @@ include('admin_header.php');
 </head>
 <body>
     <div class="user-info-container">
-        <h2 class="manages-user-title">Deactivated Drivers</h2>
+        <h2 class="manages-user-title">Deactivated Drivers (Total: <?php echo $totalDeactivatedDrivers; ?>)</h2>
 
         <div class="top-bar">
             <form class="search-bar" onsubmit="return false;">
@@ -147,20 +156,34 @@ include('admin_header.php');
                 </tr>
             </thead>
             <tbody>
-                        <tr>
-                            <td>Keyur Sabhaya</td>
-                            <td>raju@gmail.com</td>
-                            <td>9067541234</td>
-                            <td>
-                                <span>Deactivated</span>
-                            </td>
-                            <td>12/10/2025</td>
-                            <td>
-                                <button class="activate" onclick="reactivateUser('<?php echo $user['id']; ?>')">
-                                    Reactivate
-                                </button>
-                            </td>
-                        </tr>
+                <?php
+                $res = mysqli_query($conn, "SELECT driver_id, name, email, contact, deactivated_at FROM deactivateddrivers ORDER BY deactivated_at DESC");
+                if ($res && mysqli_num_rows($res) > 0) {
+                    while ($row = mysqli_fetch_assoc($res)) {
+                        $id = (int)$row['driver_id'];
+                        $name = htmlspecialchars($row['name']);
+                        $email = htmlspecialchars($row['email']);
+                        $contact = htmlspecialchars($row['contact']);
+                        $deact = $row['deactivated_at'] ? date('d/m/Y', strtotime($row['deactivated_at'])) : '';
+                        echo "<tr>";
+                        echo "<td>{$name}</td>";
+                        echo "<td>{$email}</td>";
+                        echo "<td>{$contact}</td>";
+                        echo "<td><span>Deactivated</span></td>";
+                        echo "<td>{$deact}</td>";
+                        echo "<td>";
+                        echo "<form method='post' action='driver_status_toggle.php' style='display:inline-block;'>";
+                        echo "<input type='hidden' name='id' value='{$id}'>";
+                        echo "<input type='hidden' name='new_status' value='active'>";
+                        echo "<button type='submit' class='activate'>Reactivate</button>";
+                        echo "</form>";
+                        echo "</td>";
+                        echo "</tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='6' class='no-users'>No deactivated drivers.</td></tr>";
+                }
+                ?>
             </tbody>
         </table>
     </div>
