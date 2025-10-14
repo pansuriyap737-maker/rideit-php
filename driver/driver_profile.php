@@ -3,12 +3,12 @@ session_start();
 include('../config.php');
 include('driver_index.php');
 
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+if (!isset($_SESSION['driver_id'])) {
+    header('Location: ../pages/login.php');
     exit;
 }
 
-$userId = $_SESSION['user_id'];
+$userId = (int)$_SESSION['driver_id'];
 $success = "";
 $error = "";
 
@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_profile'])) {
     $newName = mysqli_real_escape_string($conn, trim($_POST['name']));
     $newEmail = mysqli_real_escape_string($conn, trim($_POST['email']));
 
-    $updateSql = "UPDATE users SET name='$newName', email='$newEmail' WHERE id=$userId";
+    $updateSql = "UPDATE drivers SET name='$newName', email='$newEmail' WHERE id=$userId";
     if (mysqli_query($conn, $updateSql)) {
         $success = "Profile updated successfully!";
     } else {
@@ -31,7 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_password'])) {
     $newPassword = trim($_POST['new_password']);
     $confirmPassword = trim($_POST['confirm_password']);
 
-    $fetchUser = mysqli_query($conn, "SELECT password FROM users WHERE id=$userId");
+    $fetchUser = mysqli_query($conn, "SELECT password FROM drivers WHERE id=$userId");
     $userData = mysqli_fetch_assoc($fetchUser);
 
     if (!password_verify($currentPassword, $userData['password'])) {
@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_password'])) {
         $error = "New passwords do not match.";
     } else {
         $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-        $updatePwdSql = "UPDATE users SET password='$hashedPassword' WHERE id=$userId";
+        $updatePwdSql = "UPDATE drivers SET password='$hashedPassword' WHERE id=$userId";
         if (mysqli_query($conn, $updatePwdSql)) {
             $success = "Password updated successfully!";
         } else {
@@ -50,7 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_password'])) {
 }
 
 // Refresh info
-$result = mysqli_query($conn, "SELECT name, email, role FROM users WHERE id = $userId");
+$result = mysqli_query($conn, "SELECT name, email FROM drivers WHERE id = $userId");
 $user = mysqli_fetch_assoc($result);
 ?>
 

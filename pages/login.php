@@ -56,6 +56,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $error = "User not found.";
             }
         }
+    } else if ($loginType === 'driver') {
+        // Driver login against `drivers` table
+        if (table_exists($conn, 'drivers')) {
+            $sql = "SELECT * FROM drivers WHERE email = '$email'";
+            $res = mysqli_query($conn, $sql);
+            if ($res && mysqli_num_rows($res) == 1) {
+                $row = mysqli_fetch_assoc($res);
+                if (password_verify($password, $row['password'])) {
+                    $_SESSION['driver_id'] = $row['id'];
+                    $_SESSION['driver_name'] = $row['name'];
+                    header("Location: /rideit/driver/add_trip.php");
+                    exit();
+                } else {
+                    $error = "Invalid password.";
+                }
+            } else {
+                $error = "Driver not found.";
+            }
+        } else {
+            $error = "Drivers module not initialized.";
+        }
     } else {
         // Original admin + general users flow
         $sql_admin = "SELECT * FROM admin WHERE email = '$email'";
@@ -202,7 +223,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             <button type="submit" name="login_type" value="pessenger" class="submit-btn pessenger">Login</button>
             <p style=" margin: 10px; text-align: center; ">Or</p>
-            <button type="submit" name="login_type" value="driver" class="submit-btn">Login as a Driver</button>
+            <button type="submit" name="login_type" value="driver" class="submit-btn" class="driver">Login as a Driver</button>
         </form>
 
         <p class="register-link">Don't have an account? <a href="register.php">Register here</a></p>

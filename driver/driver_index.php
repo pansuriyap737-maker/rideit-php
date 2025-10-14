@@ -2,17 +2,17 @@
 // session_start();
 include('../config.php');
 
-// Check login
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+// Check driver login
+if (!isset($_SESSION['driver_id'])) {
+    header('Location: ../pages/login.php');
     exit;
 }
 
-// Fetch user name (for welcome)
-$userId = $_SESSION['user_id'];
-$query = mysqli_query($conn, "SELECT name FROM users WHERE id = $userId");
-$user = mysqli_fetch_assoc($query);
-$userName = $user ? $user['name'] : 'User';
+// Fetch driver name (for welcome)
+$driverId = (int)$_SESSION['driver_id'];
+$query = mysqli_query($conn, "SELECT name FROM drivers WHERE id = $driverId");
+$drv = mysqli_fetch_assoc($query);
+$userName = $drv ? $drv['name'] : 'Driver';
 ?>
 
 <style>
