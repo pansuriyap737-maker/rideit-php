@@ -105,90 +105,54 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f9f9f9;
-        }
+        body { font-family: 'Poppins', sans-serif; background:#f6f7fb; margin:0; }
 
-        .payment-container {
-            height: 80vh;
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-        }
+        .payment-container { min-height: 80vh; display:flex; align-items: center; flex-direction: column; }
 
-        .userpanel-tabel {
-            width: 90%;
-            margin: 30px auto;
-            border-collapse: collapse;
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
+        .userpanel-tabel { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+        .userpanel-tabel tr:nth-child(even) td { background:#fafbfe; }
 
         .user-payment,
-        .user-ride-data {
-            font-size: 16px;
-            padding: 11px 10px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
+        .user-ride-data { font-size: 16px; padding: 12px 12px; border-bottom: 1px solid #eceef4; text-align: center; }
+        .user-payment { background-color: #6a0fe0; color: white; border-bottom: none; }
 
-        .user-payment {
-            background-color: #8000ff;
-            color: white;
-        }
+        .wrap { width: 90%; max-width: 1200px; margin: 0 auto; }
+        #payment-heading { margin: 20px 0; font-weight: 600; }
 
-        tr:hover {
-            background-color: #f1f1f1;
-        }
+        .cancel-passenger { padding: 8px 12px; font-size: 15px; border: 2px solid #c00; border-radius: 10px; background: #fff; color: #c00; transition: 0.2s; cursor: pointer; }
+        .cancel-passenger:hover { background:#fdecec; transform: translateY(-1px); }
 
-        #payment-heading {
-            margin-top: 20px;
-            font-weight: 600;
-        }
+        .toolbar { display:flex; align-items:center; width:100%; }
+        .filters { display:flex; gap:8px; margin-left:auto; }
+        .btn { padding:8px 12px; border-radius:10px; border:2px solid #ccc; background:#fff; cursor:pointer; font-weight:600; }
+        .btn.active { border-color:#6a0fe0; color:#6a0fe0; background:#f3e9ff; }
 
-        .cancel-passenger {
-            padding: 6px 12px;
-            font-size: 15px;
-            border: 2px solid red;
-            border-radius: 10px;
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(58, 58, 58, 0.1);
-            color: rgb(255, 0, 0);
-            transition: 0.3s;
-            cursor: pointer;
-        }
+        .metrics { display:flex; gap:20px; width:100%; margin:10px 0 20px; }
+        .metric-card { flex:1; background:#fff; padding:12px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.06); }
+        .card { background:#fff; padding:18px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.06); width:100%; }
 
-        .cancel-passenger:hover {
-            transform: scale(1.05);
-        }
-
-         .custom-footer {
-            background-color: #6a0fe0;
-            color: white;
-            text-align: center;
-            padding: 15px 0;
-            margin-top: 40px;
-        }
+        .custom-footer { background-color: #6a0fe0; color: white; text-align: center; padding: 15px 0; margin-top: 40px; }
     </style>
 </head>
 <body>
     <div class="payment-container">
-        <div style="display:flex; align-items:center; width:90%;">
-            <h1 id="payment-heading" style="margin-right:auto;">My Bookings</h1>
-            <div style="display:flex; gap:8px;">
-                <a href="user_payment.php?view=active"><button style="padding:8px 12px; border:2px solid #6a0fe0; color:#6a0fe0; border-radius:8px; background: <?= $view==='active' ? '#f3e9ff' : '#fff' ?>;">Active</button></a>
-                <a href="user_payment.php?view=completed"><button style="padding:8px 12px; border:2px solid green; color:green; border-radius:8px; background: <?= $view==='completed' ? '#e9f8ec' : '#fff' ?>;">Completed</button></a>
-                <a href="user_payment.php?view=canceled"><button style="padding:8px 12px; border:2px solid #c00; color:#c00; border-radius:8px; background: <?= $view==='canceled' ? '#fdecec' : '#fff' ?>;">Canceled</button></a>
+        <div class="wrap">
+            <div class="toolbar">
+                <h1 id="payment-heading">My Bookings</h1>
+                <div class="filters">
+                    <a href="user_payment.php?view=active"><button class="btn <?= $view==='active' ? 'active' : '' ?>">Active</button></a>
+                    <a href="user_payment.php?view=completed"><button class="btn <?= $view==='completed' ? 'active' : '' ?>">Completed</button></a>
+                    <a href="user_payment.php?view=canceled"><button class="btn <?= $view==='canceled' ? 'active' : '' ?>">Canceled</button></a>
+                </div>
             </div>
-        </div>
 
-        <div style="display:flex; gap:20px; width:90%; margin:10px auto;">
-            <div style="flex:1; background:#fff; padding:12px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);">Total Trips Completed: <b><?= (int)($totals['total_trips'] ?? 0) ?></b></div>
-            <div style="flex:1; background:#fff; padding:12px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);">Total Amount Paid: <b>₹<?= number_format((float)($totals['total_amount'] ?? 0), 2) ?></b></div>
-        </div>
+            <div class="metrics">
+                <div class="metric-card">Total Trips Completed: <b><?= (int)($totals['total_trips'] ?? 0) ?></b></div>
+                <div class="metric-card">Total Amount Paid: <b>₹<?= number_format((float)($totals['total_amount'] ?? 0), 2) ?></b></div>
+            </div>
 
         <?php if ($view === 'active'): ?>
+        <div class="card">
         <table class="userpanel-tabel">
             <tr>
                 <th class="user-payment">Full Name (Driver)</th>
@@ -220,7 +184,9 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
                 <tr><td colspan="7" class="user-ride-data">No bookings found.</td></tr>
             <?php endif; ?>
         </table>
+        </div>
         <?php elseif ($view === 'completed'): ?>
+        <div class="card">
         <table class="userpanel-tabel">
             <tr>
                 <th class="user-payment">Full Name (Driver)</th>
@@ -245,7 +211,9 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
                 <tr><td colspan="6" class="user-ride-data">No completed bookings.</td></tr>
             <?php endif; ?>
         </table>
+        </div>
         <?php else: ?>
+        <div class="card">
         <table class="userpanel-tabel">
             <tr>
                 <th class="user-payment">Full Name (Driver)</th>
@@ -270,7 +238,9 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
                 <tr><td colspan="6" class="user-ride-data">No canceled bookings.</td></tr>
             <?php endif; ?>
         </table>
+        </div>
         <?php endif; ?>
+        </div>
     </div>
 
        <div class="custom-footer">

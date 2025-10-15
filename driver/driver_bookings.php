@@ -46,17 +46,26 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
     <title>My Bookings</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Poppins', sans-serif; }
-        .wrap { width: 1400px; margin: 30px auto; }
-        h2 { margin-top: 25px; }
-        table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
-        th, td { padding: 12px 15px; border: 1px solid #c5c4c4ff; text-align: center; }
-        th { background: #6a0fe0; color: #fff; }
+        body { font-family: 'Poppins', sans-serif; background:#f6f7fb; margin:0; }
+        .wrap { max-width: 1200px; margin: 30px auto; padding: 0 16px; }
+        h2 { margin: 24px 0 12px; font-weight:600; }
+        .card { background:#fff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.06); padding:18px; margin-top:12px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 12px 14px; border-bottom: 1px solid #eceef4; text-align: center; }
+        th { background: #6a0fe0; color: #fff; font-weight:600; }
+        tr:nth-child(even) td { background:#fafbfe; }
         .actions form { display:inline-block; margin: 0 5px; }
-        .btn { padding: 6px 12px; border-radius: 8px; border: 2px solid; cursor: pointer; }
-        .btn-complete { border-color: green; color: green; background: #fff; }
-        .metric { display:flex; gap:20px; margin: 20px 0; }
-        .metric .card { flex:1; background:#fff; padding:16px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.05); }
+        .btn { padding: 8px 12px; border-radius: 10px; border: 2px solid; cursor: pointer; background:#fff; font-weight:600; }
+        .btn-complete { border-color: #22a06b; color: #22a06b; }
+        .btn-complete:hover { background:#eaf7f1; }
+        .btn-filter { border-color:#ccc; color:#444; }
+        .btn-filter.active { border-color:#6a0fe0; color:#6a0fe0; background:#f3e9ff; }
+        .metric { display:flex; gap:20px; margin: 16px 0; }
+        .metric .card { flex:1; background:#fff; padding:16px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.06); }
+        .badge { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+        .badge-active { color:#b35a00; background:#fff4e6; border:1px solid #ffd7a8; }
+        .badge-completed { color:#176b45; background:#eaf7f1; border:1px solid #bfe6d3; }
+        .badge-canceled { color:#b42318; background:#fee4e2; border:1px solid #f7b4ae; }
     </style>
 </head>
 <body>
@@ -70,19 +79,20 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
     <h2 style="display:flex; align-items:center; gap:12px;">Bookings
         <span style="margin-left:auto; display:flex; gap:8px;">
             <a href="driver_bookings.php?view=active" style="text-decoration:none;">
-                <button class="btn" style="border-color:#6a0fe0; color:#6a0fe0; background: <?= $view==='active' ? '#f3e9ff' : '#fff' ?>;">Active</button>
+                <button class="btn btn-filter <?= $view==='active' ? 'active' : '' ?>">Active</button>
             </a>
             <a href="driver_bookings.php?view=completed" style="text-decoration:none;">
-                <button class="btn" style="border-color:green; color:green; background: <?= $view==='completed' ? '#e9f8ec' : '#fff' ?>;">Completed</button>
+                <button class="btn btn-filter <?= $view==='completed' ? 'active' : '' ?>">Completed</button>
             </a>
             <a href="driver_bookings.php?view=canceled" style="text-decoration:none;">
-                <button class="btn" style="border-color:#c00; color:#c00; background: <?= $view==='canceled' ? '#fdecec' : '#fff' ?>;">Canceled</button>
+                <button class="btn btn-filter <?= $view==='canceled' ? 'active' : '' ?>">Canceled</button>
             </a>
         </span>
     </h2>
 
     <?php if ($view === 'active'): ?>
-    <h2>Active Trips</h2>
+    <div class="card">
+    <h2 style="margin-top:0;">Active Trips <span class="badge badge-active">Active</span></h2>
     <table>
         <thead>
             <tr>
@@ -112,9 +122,11 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
             <?php endif; ?>
         </tbody>
     </table>
+    </div>
 
     <?php elseif ($view === 'completed'): ?>
-    <h2>Completed Trips</h2>
+    <div class="card">
+    <h2 style="margin-top:0;">Completed Trips <span class="badge badge-completed">Completed</span></h2>
     <table>
         <thead>
             <tr>
@@ -137,9 +149,11 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
             <?php endif; ?>
         </tbody>
     </table>
+    </div>
 
     <?php else: ?>
-    <h2>Canceled Trips</h2>
+    <div class="card">
+    <h2 style="margin-top:0;">Canceled Trips <span class="badge badge-canceled">Canceled</span></h2>
     <table>
         <thead>
             <tr>
@@ -162,6 +176,7 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
             <?php endif; ?>
         </tbody>
     </table>
+    </div>
     <?php endif; ?>
 </div>
 </body>
