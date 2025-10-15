@@ -28,7 +28,7 @@ $where = !empty($conditions) ? 'WHERE ' . implode(' AND ', $conditions) : '';
 $query = "
     SELECT 
         c.*, COALESCE(c.driver_name, d.name) AS driver_name,
-        COALESCE(SUM(CASE WHEN p.payment_status = 'success' THEN 1 ELSE 0 END), 0) AS booked_seats
+        COALESCE(SUM(CASE WHEN UPPER(p.payment_status) = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS booked_seats
     FROM 
         cars c
     LEFT JOIN drivers d ON d.id = c.user_id
@@ -214,7 +214,10 @@ $result = mysqli_query($conn, $query);
                         <h3 id="pricetag">₹<?= number_format($car['amount']) ?></h3>
                         <p id="capacity">Seating Capacity: <b><?= $car['seating'] ?? '-' ?></b></p>
                         <?php if ($available > 0): ?>
-                            <button id="ride-book">Book Now</button>
+                            <form method="GET" action="checkout.php" style="margin:0;">
+                                <input type="hidden" name="car_id" value="<?= (int)$car['car_id'] ?>">
+                                <button type="submit" id="ride-book">Book Now</button>
+                            </form>
                         <?php else: ?>
                             <div style="color:red; font-weight:bold; margin-top:10px;">Fully Booked</div>
                         <?php endif; ?>

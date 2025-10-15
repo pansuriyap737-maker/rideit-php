@@ -3,6 +3,20 @@ session_start();
 include('driver_index.php');
 include('../config.php'); // Assuming this has your database connection
 
+$driverId = isset($_SESSION['driver_id']) ? (int)$_SESSION['driver_id'] : 0;
+if ($driverId <= 0) {
+	header('Location: ../pages/login.php');
+	exit;
+}
+
+// Fetch latest paid bookings for this driver using denormalized fields in payments
+$sql = "SELECT p.passenger_name, p.car_number_plate, p.pickup, p.drop_location, COALESCE(p.ride_datetime, c.date_time) AS ride_datetime, p.amount, COALESCE(p.payment_mode, 'ONLINE') AS payment_mode
+        FROM payments p
+        INNER JOIN cars c ON c.car_id = p.car_id
+        WHERE c.user_id = $driverId AND p.payment_status = 'Success'
+        ORDER BY p.payment_date DESC";
+$ridesRes = mysqli_query($conn, $sql);
+
 ?>
 
 <!DOCTYPE html>
@@ -124,20 +138,25 @@ include('../config.php'); // Assuming this has your database connection
                 </tr>
             </thead>
             <tbody>
-                    <tr>
-                        <td>Vatsal Sabhaya</td>
-                        <td>GJ05FS2345</td>
-                        <td>Jakatnaka</td>
-                        <td>Pasodara</td>
-                        <td>03/04/2006</td>
-                        <td>10000</td>
-                        <td>Online/Cod</td>
-                        <td class="action-rides-pending">
-                            <button class="ride-accept">Accept</button>
-                            <button class="ride-cancel">Cancel</button>
-                        </td>
-                    </tr>
-                
+                <?php if ($ridesRes && mysqli_num_rows($ridesRes) > 0): ?>
+                    <?php while ($r = mysqli_fetch_assoc($ridesRes)): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($r['passenger_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($r['car_number_plate'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($r['pickup'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($r['drop_location'] ?? '-') ?></td>
+                            <td><?= $r['ride_datetime'] ? date('d/m/Y H:i', strtotime($r['ride_datetime'])) : '-' ?></td>
+                            <td><?= number_format((float)$r['amount'], 2) ?></td>
+                            <td><?= htmlspecialchars($r['payment_mode']) ?></td>
+                            <td class="action-rides-pending">
+                                <button class="ride-accept">Accept</button>
+                                <button class="ride-cancel">Cancel</button>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <tr><td colspan="8">No pending rides.</td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>

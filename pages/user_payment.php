@@ -9,26 +9,58 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = (int)($_SESSION['user_id'] ?? 0);
+$session_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
+
+// Ensure users table exists (in case only `pessanger` was used earlier)
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS users (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) DEFAULT NULL,
+    email VARCHAR(100) DEFAULT NULL,
+    contact VARCHAR(15) DEFAULT NULL,
+    password VARCHAR(255) DEFAULT NULL,
+    role ENUM('user','admin') DEFAULT 'user',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    PRIMARY KEY (id),
+    UNIQUE KEY email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// Map current passenger to a users.id used in payments FK
+$userIdForFk = 0;
+$chkUsers = mysqli_query($conn, "SELECT id FROM users WHERE id = $user_id");
+if ($chkUsers && mysqli_num_rows($chkUsers) === 1) {
+    $userIdForFk = (int)mysqli_fetch_assoc($chkUsers)['id'];
+} else {
+    $ps = mysqli_query($conn, "SELECT email FROM pessanger WHERE id = $user_id");
+    if ($ps && mysqli_num_rows($ps) === 1) {
+        $emailRow = mysqli_fetch_assoc($ps);
+        $emailEsc = mysqli_real_escape_string($conn, (string)$emailRow['email']);
+        $u2 = mysqli_query($conn, "SELECT id FROM users WHERE email = '$emailEsc'");
+        if ($u2 && mysqli_num_rows($u2) === 1) {
+            $userIdForFk = (int)mysqli_fetch_assoc($u2)['id'];
+        }
+    }
+}
 
 // Fixed SQL query (removed phone column)
 $query = "
     SELECT 
-        u.name AS driver_name,
-        c.number_plate AS car_number_plate,
-        c.pickup_location AS pickup,
-        c.drop_location AS drop_location,
+        COALESCE(p.driver_name, d.name) AS driver_name,
+        COALESCE(p.car_number_plate, c.number_plate) AS car_number_plate,
+        COALESCE(p.pickup, c.pickup_location) AS pickup,
+        COALESCE(p.drop_location, c.drop_location) AS drop_location,
         p.amount AS amount,
+        COALESCE(p.payment_mode, 'ONLINE') AS payment_mode,
         p.payment_status,
         p.payment_date
     FROM 
         payments p
     INNER JOIN 
         cars c ON p.car_id = c.car_id
-    INNER JOIN 
-        pessanger u ON c.user_id = u.id
+    LEFT JOIN 
+        drivers d ON d.id = c.user_id
     WHERE 
-        c.user_id = $user_id AND p.user_id != $user_id
+        p.user_id = $userIdForFk
     ORDER BY 
         p.payment_date DESC
 ";
