@@ -46,23 +46,27 @@ $maxDate = date('Y-m-d\T23:59', strtotime('+90 day')); // 90 days from now
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Trip</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+        body { font-family: 'Poppins', sans-serif; background: #f6f7fb; margin: 0; }
         form {
             width: 900px;
             margin: auto;
             background: #fff;
             padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 12px rgba(0,0,0,0.1);
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
         }
         h2 {
             text-align: center;
-            margin-bottom: 25px;
-            margin-top: 120px;
+            margin-bottom: 18px;
+            margin-top: 110px;
+            font-weight: 600;
         }
         .form-row {
             display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 18px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
         }
         .form-group {
             flex: 1;
@@ -71,26 +75,39 @@ $maxDate = date('Y-m-d\T23:59', strtotime('+90 day')); // 90 days from now
         }
         label {
             margin-bottom: 6px;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
         }
         input, select {
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            height: 44px;
+            padding: 10px 12px;
+            font-size: 15px;
+            border: 1px solid #e2e5ec;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color .15s ease, box-shadow .15s ease;
+            background: #fff;
         }
+        input:focus, select:focus { border-color: #6a0fe0; box-shadow: 0 0 0 3px rgba(106,15,224,0.08); }
         button {
-            background-color: #007bff;
-            color: white;
+            background-color: #6a0fe0;
+            color: #fff;
             padding: 12px 20px;
             border: none;
             font-size: 16px;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
+            transition: transform .1s ease, background .15s ease;
         }
+        button:hover { background: #5a00d6; transform: translateY(-1px); }
         .submit-row {
             text-align: center;
+            margin-top: 4px;
         }
+        .image-inline { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+        .image-inline img { width: 100%; height: auto; max-height: 280px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e5ec; }
+        @media (max-width: 760px) { form { width: 96%; } }
     </style>
 </head>
 <body>
@@ -102,33 +119,26 @@ $maxDate = date('Y-m-d\T23:59', strtotime('+90 day')); // 90 days from now
     <input type="hidden" name="car_id" value="<?= $row['car_id'] ?>">
 
     <div class="form-row">
-        <div class="form-group">
+        <div class="form-group" style="flex:1 1 100%;">
             <label>Car Image</label>
-            <img src="../uploads/<?= htmlspecialchars($row['car_image']) ?>" width="100" height="60" alt="Car Image">
-            <input type="file" name="car_image">
-        </div>
-        <div class="form-group">
-            <label>Car Name</label>
-            <input type="text" name="car_name" value="<?= htmlspecialchars($row['car_name']) ?>" required>
+            <div class="image-inline">
+                <img id="carPreview" src="../uploads/<?= htmlspecialchars($row['car_image']) ?>" alt="Car Image">
+                <input type="file" name="car_image" id="car_image">
+            </div>
         </div>
     </div>
 
     <div class="form-row">
+        <div class="form-group">
+            <label>Car Name</label>
+            <input type="text" name="car_name" value="<?= htmlspecialchars($row['car_name']) ?>" required>
+        </div>
         <div class="form-group">
             <label>Seating Capacity</label>
             <select name="seating" required>
                 <option value="">Select</option>
                 <?php foreach ($seating_options as $seat): ?>
                     <option value="<?= $seat ?>" <?= ($seat == $row['seating']) ? 'selected' : '' ?>><?= $seat ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>City</label>
-            <select name="city" required>
-                <option value="">Select City</option>
-                <?php foreach ($gujarat_cities as $city): ?>
-                    <option value="<?= $city ?>" <?= ($city == $row['city']) ? 'selected' : '' ?>><?= $city ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -148,21 +158,11 @@ $maxDate = date('Y-m-d\T23:59', strtotime('+90 day')); // 90 days from now
     <div class="form-row">
         <div class="form-group">
             <label>Pickup Location</label>
-            <select name="pickup_location" required>
-                <option value="">Select Pickup</option>
-                <?php foreach ($gujarat_cities as $city): ?>
-                    <option value="<?= $city ?>" <?= ($city == $row['pickup_location']) ? 'selected' : '' ?>><?= $city ?></option>
-                <?php endforeach; ?>
-            </select>
+            <input type="text" name="pickup_location" value="<?= htmlspecialchars($row['pickup_location']) ?>" placeholder="Enter pickup location" required>
         </div>
         <div class="form-group">
             <label>Drop Location</label>
-            <select name="drop_location" required>
-                <option value="">Select Drop</option>
-                <?php foreach ($gujarat_cities as $city): ?>
-                    <option value="<?= $city ?>" <?= ($city == $row['drop_location']) ? 'selected' : '' ?>><?= $city ?></option>
-                <?php endforeach; ?>
-            </select>
+            <input type="text" name="drop_location" value="<?= htmlspecialchars($row['drop_location']) ?>" placeholder="Enter drop location" required>
         </div>
     </div>
 
