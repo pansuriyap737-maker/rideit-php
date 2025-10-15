@@ -37,6 +37,12 @@
             color: var(--hover-text);
         }
 
+        .nav.active {
+            background: #ffffff;
+            color: var(--primary-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
         .header {
             background-color: var(--primary-color);
             color: var(--text-color);
@@ -117,14 +123,15 @@
                 <img src="/rideit/assets/images/rideitlogo.png" alt="rideit Logo" class="logo-img logo">  <!-- Added class="logo" to match the CSS -->
             </a>
         </div>
+        <?php $currentPath = $_SERVER['REQUEST_URI'] ?? ''; ?>
         <nav>
             <ul>
-                <li><a href="/rideit/pages/home.php" class="nav">Home</a></li>  <!-- Added class="nav" to the <a> tags -->
-                <li><a href="/rideit/pages/about.php" class="nav">About</a></li>
-                <li><a href="/rideit/pages/contact.php" class="nav">Contact</a></li>
+                <li><a href="/rideit/pages/home.php" class="nav <?= strpos($currentPath, '/rideit/pages/home.php') !== false ? 'active' : '' ?>">Home</a></li>  <!-- Added class="nav" to the <a> tags -->
+                <li><a href="/rideit/pages/about.php" class="nav <?= strpos($currentPath, '/rideit/pages/about.php') !== false ? 'active' : '' ?>">About</a></li>
+                <li><a href="/rideit/pages/contact.php" class="nav <?= strpos($currentPath, '/rideit/pages/contact.php') !== false ? 'active' : '' ?>">Contact</a></li>
                 <!-- <li><a href="/rideit/pages/donate.php" class="nav">Donate Now</a></li> -->  <!-- Added class="nav" if you uncomment -->
-                <li><a href="/rideit/pages/login.php" class="nav">Login</a></li>
-                <li><a href="/rideit/pages/register.php" class="nav">Register</a></li>
+                <li><a href="/rideit/pages/login.php" class="nav <?= strpos($currentPath, '/rideit/pages/login.php') !== false ? 'active' : '' ?>">Login</a></li>
+                <li><a href="/rideit/pages/register.php" class="nav <?= strpos($currentPath, '/rideit/pages/register.php') !== false ? 'active' : '' ?>">Register</a></li>
             </ul>
         </nav>
     </header>

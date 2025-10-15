@@ -46,6 +46,11 @@ $userName = $drv ? $drv['name'] : 'Driver';
         background-color: white !important;
         color: #6a0fe0 !important;
     }
+    .nav.active {
+        background:#ffffff !important;
+        color:#6a0fe0 !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
 
     .header {
         background-color: #6a0fe0;
@@ -147,6 +152,7 @@ $userName = $drv ? $drv['name'] : 'Driver';
 </script>
 
 <!-- Navigation Bar -->
+<?php $currentPath = $_SERVER['REQUEST_URI'] ?? ''; ?>
 <div class="header">
     <!-- Main logo on the left -->
     <div>
@@ -155,10 +161,10 @@ $userName = $drv ? $drv['name'] : 'Driver';
 
     <!-- Right-side content -->
     <div class="header-right">
-        <a href="add_trip.php" class="nav">Ride Share</a>
-        <a href="view_information.php" class="nav">Ride Details</a>
-        <a href="pending_rides.php" class="nav">Pending Rides</a>
-        <a href="driver_bookings.php" class="nav">My Bookings</a>
+        <a href="add_trip.php" class="nav <?= strpos($currentPath, 'add_trip.php') !== false ? 'active' : '' ?>">Ride Share</a>
+        <a href="view_information.php" class="nav <?= strpos($currentPath, 'view_information.php') !== false ? 'active' : '' ?>">Ride Details</a>
+        <a href="pending_rides.php" class="nav <?= strpos($currentPath, 'pending_rides.php') !== false ? 'active' : '' ?>">Pending Rides</a>
+        <a href="driver_bookings.php" class="nav <?= strpos($currentPath, 'driver_bookings.php') !== false ? 'active' : '' ?>">My Bookings</a>
 
 
         <!-- User menu wrapper -->

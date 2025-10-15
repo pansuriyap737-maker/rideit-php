@@ -46,6 +46,11 @@ $userName = $user ? $user['name'] : 'User';
         background-color: white !important;
         color: #6a0fe0 !important;
     }
+    .nav.active {
+        background:#ffffff !important;
+        color:#6a0fe0 !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
 
     .header {
         background-color: #6a0fe0;
@@ -147,6 +152,7 @@ $userName = $user ? $user['name'] : 'User';
 </script>
 
 <!-- Navigation Bar -->
+<?php $currentPath = $_SERVER['REQUEST_URI'] ?? ''; ?>
 <div class="header">
     <!-- Main logo on the left -->
     <div>
@@ -155,9 +161,9 @@ $userName = $user ? $user['name'] : 'User';
 
     <!-- Right-side content -->
     <div class="header-right">
-        <a href="user_dashboard.php" class="nav">Dashboard</a>
-        <a href="trip_booking.php" class="nav">Book rides</a>
-        <a href="user_payment.php" class="nav">My Bookings</a>
+        <a href="user_dashboard.php" class="nav <?= strpos($currentPath, 'user_dashboard.php') !== false ? 'active' : '' ?>">Dashboard</a>
+        <a href="trip_booking.php" class="nav <?= strpos($currentPath, 'trip_booking.php') !== false ? 'active' : '' ?>">Book rides</a>
+        <a href="user_payment.php" class="nav <?= strpos($currentPath, 'user_payment.php') !== false ? 'active' : '' ?>">My Bookings</a>
 
 
         <!-- User menu wrapper -->
