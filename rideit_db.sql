@@ -199,6 +199,37 @@ INSERT INTO `users` (`id`, `name`, `email`, `contact`, `password`, `role`, `crea
 (2, 'vani', 'hadiyaparag12@gmail.com', '8000874240', '$2y$10$DX36/H3cfvPyf9BD7RrpS.dgD6CmuW4iUjqG.l731ANDPzgUnBFXq', 'user', '2025-04-07 18:23:32'),
 (3, 'jay', 'hadiyaparag@gmail.com', '8000874240', '$2y$10$B.Je0PNybKsSLCjXxV78wuuV8qbDz9KssvLwh1IPad1EzABJCeF9C', 'user', '2025-04-08 05:25:59');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pessanger`
+--
+
+CREATE TABLE `pessanger` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `contact` varchar(15) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `deactivatedpesenger`
+--
+
+CREATE TABLE `deactivatedpesenger` (
+  `user_id` int(11) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `contact` varchar(15) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `deactivated_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Indexes for dumped tables
 --
@@ -254,6 +285,20 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `pessanger`
+--
+ALTER TABLE `pessanger`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `deactivatedpesenger`
+--
+ALTER TABLE `deactivatedpesenger`
+  ADD PRIMARY KEY (`user_id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -298,6 +343,12 @@ ALTER TABLE `payments`
 --
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `pessanger`
+--
+ALTER TABLE `pessanger`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
