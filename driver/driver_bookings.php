@@ -1,102 +1,169 @@
 <?php
 session_start();
 include('driver_index.php');
-include('../config.php'); // Assuming this has your database connection
-?>
+include('../config.php');
 
+if (!isset($_SESSION['driver_id'])) { header('Location: ../pages/login.php'); exit; }
+$driverId = (int)$_SESSION['driver_id'];
+$view = isset($_GET['view']) ? strtolower(trim($_GET['view'])) : 'active';
+if (!in_array($view, ['active','completed','canceled'], true)) { $view = 'active'; }
+
+// Ensure payments.ride_status exists (backward compatibility on older DBs)
+$__col = mysqli_query($conn, "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' AND COLUMN_NAME = 'ride_status'");
+if ($__col && mysqli_num_rows($__col) === 0) {
+	mysqli_query($conn, "ALTER TABLE payments ADD COLUMN ride_status ENUM('pending','active','completed','canceled') DEFAULT 'pending'");
+}
+
+// Active rides
+$activeSql = "SELECT p.payment_id, p.passenger_name, p.car_number_plate, p.pickup, p.drop_location, COALESCE(p.ride_datetime, c.date_time) AS ride_datetime, p.amount, COALESCE(p.payment_mode,'ONLINE') AS payment_mode
+              FROM payments p INNER JOIN cars c ON c.car_id = p.car_id
+              WHERE c.user_id = $driverId AND p.payment_status='Success' AND p.ride_status='active'";
+$activeRes = mysqli_query($conn, $activeSql);
+
+// Completed rides
+$completedSql = "SELECT p.payment_id, p.passenger_name, p.car_number_plate, p.pickup, p.drop_location, COALESCE(p.ride_datetime, c.date_time) AS ride_datetime, p.amount, COALESCE(p.payment_mode,'ONLINE') AS payment_mode
+                 FROM payments p INNER JOIN cars c ON c.car_id = p.car_id
+                 WHERE c.user_id = $driverId AND p.payment_status='Success' AND p.ride_status='completed'";
+$completedRes = mysqli_query($conn, $completedSql);
+
+// Canceled rides
+$canceledSql = "SELECT p.payment_id, p.passenger_name, p.car_number_plate, p.pickup, p.drop_location, COALESCE(p.ride_datetime, c.date_time) AS ride_datetime, p.amount, COALESCE(p.payment_mode,'ONLINE') AS payment_mode
+                FROM payments p INNER JOIN cars c ON c.car_id = p.car_id
+                WHERE c.user_id = $driverId AND p.payment_status='Success' AND p.ride_status='canceled'";
+$canceledRes = mysqli_query($conn, $canceledSql);
+
+// Totals
+$totalsSql = "SELECT 
+  SUM(CASE WHEN p.ride_status='completed' THEN 1 ELSE 0 END) AS total_trips,
+  SUM(CASE WHEN p.ride_status='completed' THEN p.amount ELSE 0 END) AS total_amount
+FROM payments p INNER JOIN cars c ON c.car_id = p.car_id
+WHERE c.user_id = $driverId AND p.payment_status='Success'";
+$totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Driver Bookings</title>
+    <title>My Bookings</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-
-        .booking-rides-container {
-            width: 1400px;
-            margin: 40px auto 40px;
-            font-family: Arial, sans-serif;
-            height: 100vh;
-        }
-
-        .booking-rides-heading {
-            font-size: 30px;
-            text-align: center;
-            color: #333;
-            margin-bottom: 20px;
-        }
-
-       table {
-            width: 100%;
-            border-collapse: collapse;
-            /* Important to avoid double borders */
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-        }
-
-        th,
-        td {
-            padding: 12px 15px;
-            text-align: center;
-            border: 1px solid #c5c4c4ff;
-            /* Add borders to all sides */
-        }
-
-        tr:hover {
-            background-color: #e9e7e7ff;
-        }
-
-        th {
-            font-size: 17px;
-            background-color: #6a0fe0;
-            color: white;
-        }
-
-        td {
-            font-size: 16px;
-            align-items: center;
-        }
-
-         .custom-footer {
-            background-color: #6a0fe0;
-            color: white;
-            text-align: center;
-            padding: 15px 0;
-            margin-top: 40px;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+        .wrap { width: 1400px; margin: 30px auto; }
+        h2 { margin-top: 25px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+        th, td { padding: 12px 15px; border: 1px solid #c5c4c4ff; text-align: center; }
+        th { background: #6a0fe0; color: #fff; }
+        .actions form { display:inline-block; margin: 0 5px; }
+        .btn { padding: 6px 12px; border-radius: 8px; border: 2px solid; cursor: pointer; }
+        .btn-complete { border-color: green; color: green; background: #fff; }
+        .metric { display:flex; gap:20px; margin: 20px 0; }
+        .metric .card { flex:1; background:#fff; padding:16px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
-    <div class="booking-rides-container">
-        <h2 class="booking-rides-heading">Bookings</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Full Name(Passenger)</th>
-                    <th>Number Plate</th>
-                    <th>Pickup</th>
-                    <th>Drop</th>
-                    <th>Booking DateTime</th>
-                    <th>Amount (₹)</th>
-                    <th>Payment Mode</th>
-                </tr>
-            </thead>
-            <tbody>
-                    <tr>
-                        <td>Vatsal Sabhaya</td>
-                        <td>GJ05FS2345</td>
-                        <td>Jakatnaka</td>
-                        <td>Pasodara</td>
-                        <td>03/04/2006</td>
-                        <td>10000</td>
-                        <td>Online/Cod</td>
-                    </tr>
-            </tbody>
-        </table>
+<div class="wrap">
+    <h2>Totals</h2>
+    <div class="metric">
+        <div class="card">Total Trips Completed: <b><?= (int)($totals['total_trips'] ?? 0) ?></b></div>
+        <div class="card">Total Amount Received: <b>₹<?= number_format((float)($totals['total_amount'] ?? 0), 2) ?></b></div>
     </div>
 
-    <div class="custom-footer">
-        <?php include('../includes/footer.php'); ?>
-    </div>
+    <h2 style="display:flex; align-items:center; gap:12px;">Bookings
+        <span style="margin-left:auto; display:flex; gap:8px;">
+            <a href="driver_bookings.php?view=active" style="text-decoration:none;">
+                <button class="btn" style="border-color:#6a0fe0; color:#6a0fe0; background: <?= $view==='active' ? '#f3e9ff' : '#fff' ?>;">Active</button>
+            </a>
+            <a href="driver_bookings.php?view=completed" style="text-decoration:none;">
+                <button class="btn" style="border-color:green; color:green; background: <?= $view==='completed' ? '#e9f8ec' : '#fff' ?>;">Completed</button>
+            </a>
+            <a href="driver_bookings.php?view=canceled" style="text-decoration:none;">
+                <button class="btn" style="border-color:#c00; color:#c00; background: <?= $view==='canceled' ? '#fdecec' : '#fff' ?>;">Canceled</button>
+            </a>
+        </span>
+    </h2>
+
+    <?php if ($view === 'active'): ?>
+    <h2>Active Trips</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Passenger</th><th>Number Plate</th><th>Pickup</th><th>Drop</th><th>DateTime</th><th>Amount</th><th>Mode</th><th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if ($activeRes && mysqli_num_rows($activeRes) > 0): while ($r = mysqli_fetch_assoc($activeRes)): ?>
+                <tr>
+                    <td><?= htmlspecialchars($r['passenger_name'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['car_number_plate'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['pickup'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['drop_location'] ?? '-') ?></td>
+                    <td><?= $r['ride_datetime'] ? date('d/m/Y H:i', strtotime($r['ride_datetime'])) : '-' ?></td>
+                    <td><?= number_format((float)$r['amount'], 2) ?></td>
+                    <td><?= htmlspecialchars($r['payment_mode']) ?></td>
+                    <td class="actions">
+                        <form method="POST" action="ride_status_update.php">
+                            <input type="hidden" name="payment_id" value="<?= (int)$r['payment_id'] ?>">
+                            <input type="hidden" name="action" value="complete">
+                            <button type="submit" class="btn btn-complete">Complete</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="8">No active trips.</td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+
+    <?php elseif ($view === 'completed'): ?>
+    <h2>Completed Trips</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Passenger</th><th>Number Plate</th><th>Pickup</th><th>Drop</th><th>DateTime</th><th>Amount</th><th>Mode</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if ($completedRes && mysqli_num_rows($completedRes) > 0): while ($r = mysqli_fetch_assoc($completedRes)): ?>
+                <tr>
+                    <td><?= htmlspecialchars($r['passenger_name'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['car_number_plate'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['pickup'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['drop_location'] ?? '-') ?></td>
+                    <td><?= $r['ride_datetime'] ? date('d/m/Y H:i', strtotime($r['ride_datetime'])) : '-' ?></td>
+                    <td><?= number_format((float)$r['amount'], 2) ?></td>
+                    <td><?= htmlspecialchars($r['payment_mode']) ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="7">No completed trips.</td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+
+    <?php else: ?>
+    <h2>Canceled Trips</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Passenger</th><th>Number Plate</th><th>Pickup</th><th>Drop</th><th>DateTime</th><th>Amount</th><th>Mode</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if ($canceledRes && mysqli_num_rows($canceledRes) > 0): while ($r = mysqli_fetch_assoc($canceledRes)): ?>
+                <tr>
+                    <td><?= htmlspecialchars($r['passenger_name'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['car_number_plate'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['pickup'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($r['drop_location'] ?? '-') ?></td>
+                    <td><?= $r['ride_datetime'] ? date('d/m/Y H:i', strtotime($r['ride_datetime'])) : '-' ?></td>
+                    <td><?= number_format((float)$r['amount'], 2) ?></td>
+                    <td><?= htmlspecialchars($r['payment_mode']) ?></td>
+                </tr>
+            <?php endwhile; else: ?>
+                <tr><td colspan="7">No canceled trips.</td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+</div>
 </body>
 </html>
+

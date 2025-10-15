@@ -11,6 +11,8 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 $session_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
+$view = isset($_GET['view']) ? strtolower(trim($_GET['view'])) : 'active';
+if (!in_array($view, ['active','completed','canceled'], true)) { $view = 'active'; }
 
 // Ensure users table exists (in case only `pessanger` was used earlier)
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS users (
@@ -43,29 +45,57 @@ if ($chkUsers && mysqli_num_rows($chkUsers) === 1) {
 }
 
 // Fixed SQL query (removed phone column)
-$query = "
-    SELECT 
-        COALESCE(p.driver_name, d.name) AS driver_name,
-        COALESCE(p.car_number_plate, c.number_plate) AS car_number_plate,
-        COALESCE(p.pickup, c.pickup_location) AS pickup,
-        COALESCE(p.drop_location, c.drop_location) AS drop_location,
-        p.amount AS amount,
-        COALESCE(p.payment_mode, 'ONLINE') AS payment_mode,
-        p.payment_status,
-        p.payment_date
-    FROM 
-        payments p
-    INNER JOIN 
-        cars c ON p.car_id = c.car_id
-    LEFT JOIN 
-        drivers d ON d.id = c.user_id
-    WHERE 
-        p.user_id = $userIdForFk
-    ORDER BY 
-        p.payment_date DESC
-";
+$activeQ = "
+    SELECT p.payment_id, COALESCE(p.driver_name, d.name) AS driver_name,
+           COALESCE(p.car_number_plate, c.number_plate) AS car_number_plate,
+           COALESCE(p.pickup, c.pickup_location) AS pickup,
+           COALESCE(p.drop_location, c.drop_location) AS drop_location,
+           p.amount AS amount, COALESCE(p.payment_mode, 'ONLINE') AS payment_mode,
+           p.payment_status, p.payment_date, p.ride_status
+    FROM payments p
+    INNER JOIN cars c ON p.car_id = c.car_id
+    LEFT JOIN drivers d ON d.id = c.user_id
+    WHERE p.user_id = $userIdForFk AND p.payment_status='Success' AND p.ride_status IN ('pending','active')
+    ORDER BY p.payment_date DESC";
 
-$result = mysqli_query($conn, $query);
+$completedQ = "
+    SELECT p.payment_id, COALESCE(p.driver_name, d.name) AS driver_name,
+           COALESCE(p.car_number_plate, c.number_plate) AS car_number_plate,
+           COALESCE(p.pickup, c.pickup_location) AS pickup,
+           COALESCE(p.drop_location, c.drop_location) AS drop_location,
+           p.amount AS amount, COALESCE(p.payment_mode, 'ONLINE') AS payment_mode,
+           p.payment_status, p.payment_date, p.ride_status
+    FROM payments p
+    INNER JOIN cars c ON p.car_id = c.car_id
+    LEFT JOIN drivers d ON d.id = c.user_id
+    WHERE p.user_id = $userIdForFk AND p.payment_status='Success' AND p.ride_status='completed'
+    ORDER BY p.payment_date DESC";
+
+$canceledQ = "
+    SELECT p.payment_id, COALESCE(p.driver_name, d.name) AS driver_name,
+           COALESCE(p.car_number_plate, c.number_plate) AS car_number_plate,
+           COALESCE(p.pickup, c.pickup_location) AS pickup,
+           COALESCE(p.drop_location, c.drop_location) AS drop_location,
+           p.amount AS amount, COALESCE(p.payment_mode, 'ONLINE') AS payment_mode,
+           p.payment_status, p.payment_date, p.ride_status
+    FROM payments p
+    INNER JOIN cars c ON p.car_id = c.car_id
+    LEFT JOIN drivers d ON d.id = c.user_id
+    WHERE p.user_id = $userIdForFk AND p.payment_status='Success' AND p.ride_status='canceled'
+    ORDER BY p.payment_date DESC";
+
+$activeRes = mysqli_query($conn, $activeQ);
+$completedRes = mysqli_query($conn, $completedQ);
+$canceledRes = mysqli_query($conn, $canceledQ);
+
+// Totals
+$totalsSql = "SELECT 
+  SUM(CASE WHEN p.ride_status='completed' THEN 1 ELSE 0 END) AS total_trips,
+  SUM(CASE WHEN p.ride_status='completed' THEN p.amount ELSE 0 END) AS total_amount
+FROM payments p WHERE p.user_id = $userIdForFk AND p.payment_status='Success'";
+$totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
+
+// no single query now; we use view-specific result sets
 ?>
 
 <!DOCTYPE html>
@@ -156,8 +186,8 @@ $result = mysqli_query($conn, $query);
                 <th class="user-payment">Payment Mode</th>
                 <th class="user-payment">Action</th>
             </tr>
-            <?php if ($result && mysqli_num_rows($result) > 0): ?>
-                <?php while ($row = mysqli_fetch_assoc($result)): ?>
+            <?php if ($activeRes && mysqli_num_rows($activeRes) > 0): ?>
+                <?php while ($row = mysqli_fetch_assoc($activeRes)): ?>
                     <tr>
                         <td class="user-ride-data"><?= htmlspecialchars($row['driver_name']) ?></td>
                         <td class="user-ride-data"><?= htmlspecialchars($row['car_number_plate']) ?></td>

@@ -164,16 +164,24 @@ CREATE TABLE `payments` (
   `amount` decimal(10,2) NOT NULL,
   `razorpay_payment_id` varchar(100) DEFAULT NULL,
   `payment_status` varchar(50) DEFAULT NULL,
-  `payment_date` timestamp NOT NULL DEFAULT current_timestamp()
+  `payment_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `driver_name` varchar(100) DEFAULT NULL,
+  `passenger_name` varchar(100) DEFAULT NULL,
+  `car_number_plate` varchar(50) DEFAULT NULL,
+  `pickup` varchar(100) DEFAULT NULL,
+  `drop_location` varchar(100) DEFAULT NULL,
+  `payment_mode` varchar(20) DEFAULT NULL,
+  `ride_datetime` datetime DEFAULT NULL,
+  `ride_status` enum('pending','active','completed','canceled') DEFAULT 'pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `payments`
 --
 
-INSERT INTO `payments` (`payment_id`, `user_id`, `car_id`, `amount`, `razorpay_payment_id`, `payment_status`, `payment_date`) VALUES
-(6, 3, 7, 400.00, 'pay_QGRpnfXYtWiCSF', 'Success', '2025-04-08 05:28:51'),
-(15, 1, 6, 100.00, 'pay_QGSMwgKRnfoiYU', 'Success', '2025-04-08 06:00:13');
+INSERT INTO `payments` (`payment_id`, `user_id`, `car_id`, `amount`, `razorpay_payment_id`, `payment_status`, `payment_date`, `driver_name`, `passenger_name`, `car_number_plate`, `pickup`, `drop_location`, `payment_mode`, `ride_datetime`) VALUES
+(6, 3, 7, 400.00, 'pay_QGRpnfXYtWiCSF', 'Success', '2025-04-08 05:28:51', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 1, 6, 100.00, 'pay_QGSMwgKRnfoiYU', 'Success', '2025-04-08 06:00:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 

@@ -10,10 +10,10 @@ if ($driverId <= 0) {
 }
 
 // Fetch latest paid bookings for this driver using denormalized fields in payments
-$sql = "SELECT p.passenger_name, p.car_number_plate, p.pickup, p.drop_location, COALESCE(p.ride_datetime, c.date_time) AS ride_datetime, p.amount, COALESCE(p.payment_mode, 'ONLINE') AS payment_mode
+$sql = "SELECT p.payment_id, p.passenger_name, p.car_number_plate, p.pickup, p.drop_location, COALESCE(p.ride_datetime, c.date_time) AS ride_datetime, p.amount, COALESCE(p.payment_mode, 'ONLINE') AS payment_mode, p.ride_status
         FROM payments p
         INNER JOIN cars c ON c.car_id = p.car_id
-        WHERE c.user_id = $driverId AND p.payment_status = 'Success'
+        WHERE c.user_id = $driverId AND p.payment_status = 'Success' AND p.ride_status IN ('pending','active')
         ORDER BY p.payment_date DESC";
 $ridesRes = mysqli_query($conn, $sql);
 
@@ -149,8 +149,16 @@ $ridesRes = mysqli_query($conn, $sql);
                             <td><?= number_format((float)$r['amount'], 2) ?></td>
                             <td><?= htmlspecialchars($r['payment_mode']) ?></td>
                             <td class="action-rides-pending">
-                                <button class="ride-accept">Accept</button>
-                                <button class="ride-cancel">Cancel</button>
+                                <form method="POST" action="ride_status_update.php" style="margin:0">
+                                    <input type="hidden" name="payment_id" value="<?= (int)$r['payment_id'] ?>">
+                                    <input type="hidden" name="action" value="accept">
+                                    <button class="ride-accept" type="submit">Accept</button>
+                                </form>
+                                <form method="POST" action="ride_status_update.php" style="margin:0">
+                                    <input type="hidden" name="payment_id" value="<?= (int)$r['payment_id'] ?>">
+                                    <input type="hidden" name="action" value="cancel">
+                                    <button class="ride-cancel" type="submit">Cancel</button>
+                                </form>
                             </td>
                         </tr>
                     <?php endwhile; ?>

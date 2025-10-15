@@ -125,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$ensureCol('drop_location', 'VARCHAR(100) DEFAULT NULL');
 		$ensureCol('payment_mode', 'VARCHAR(20) DEFAULT NULL');
 		$ensureCol('ride_datetime', 'DATETIME DEFAULT NULL');
+		$ensureCol('ride_status', "ENUM('pending','active','completed','canceled') DEFAULT 'pending'");
 
 		$driverName = $car['driver_name'] ?? '';
 		$passengerName = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
@@ -140,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$rideDateTime = $car['date_time'] ?? null; // may be null if not selected
 
 		// Record payment with denormalized fields (use users.id)
-		mysqli_query($conn, "INSERT INTO payments (user_id, car_id, amount, razorpay_payment_id, payment_status, driver_name, passenger_name, car_number_plate, pickup, drop_location, payment_mode, ride_datetime) VALUES ($userIdForFk, {$car['car_id']}, $amount, '$razorpayId', 'Success', '" . mysqli_real_escape_string($conn, $driverName) . "', '" . mysqli_real_escape_string($conn, $passengerName) . "', '" . mysqli_real_escape_string($conn, $plate) . "', '" . mysqli_real_escape_string($conn, $pickupLoc) . "', '" . mysqli_real_escape_string($conn, $dropLoc) . "', '$paymentMode', " . ($rideDateTime ? "'" . mysqli_real_escape_string($conn, $rideDateTime) . "'" : 'NULL') . ")");
+		mysqli_query($conn, "INSERT INTO payments (user_id, car_id, amount, razorpay_payment_id, payment_status, driver_name, passenger_name, car_number_plate, pickup, drop_location, payment_mode, ride_datetime, ride_status) VALUES ($userIdForFk, {$car['car_id']}, $amount, '$razorpayId', 'Success', '" . mysqli_real_escape_string($conn, $driverName) . "', '" . mysqli_real_escape_string($conn, $passengerName) . "', '" . mysqli_real_escape_string($conn, $plate) . "', '" . mysqli_real_escape_string($conn, $pickupLoc) . "', '" . mysqli_real_escape_string($conn, $dropLoc) . "', '$paymentMode', " . ($rideDateTime ? "'" . mysqli_real_escape_string($conn, $rideDateTime) . "'" : 'NULL') . ", 'pending')");
 
 		// Record booking (1 seat) with users.id
 		mysqli_query($conn, "INSERT INTO bookings (user_id, car_id, seats_booked) VALUES ($userIdForFk, {$car['car_id']}, 1)");
