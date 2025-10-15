@@ -230,6 +230,40 @@ CREATE TABLE `deactivatedpesenger` (
   `deactivated_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `drivers`
+--
+
+CREATE TABLE `drivers` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `contact` varchar(15) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `license_no` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `deactivateddrivers`
+--
+
+CREATE TABLE `deactivateddrivers` (
+  `id` int(11) NOT NULL,
+  `driver_id` int(11) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `contact` varchar(15) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `license_no` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `deactivated_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Indexes for dumped tables
 --
@@ -299,6 +333,20 @@ ALTER TABLE `deactivatedpesenger`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `drivers`
+--
+ALTER TABLE `drivers`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `deactivateddrivers`
+--
+ALTER TABLE `deactivateddrivers`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `driver_id` (`driver_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -348,6 +396,18 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `pessanger`
 --
 ALTER TABLE `pessanger`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `drivers`
+--
+ALTER TABLE `drivers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `deactivateddrivers`
+--
+ALTER TABLE `deactivateddrivers`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
