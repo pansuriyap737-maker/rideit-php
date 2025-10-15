@@ -76,6 +76,7 @@ CREATE TABLE `cars` (
   `number_plate` varchar(50) NOT NULL,
   `pickup_location` varchar(100) DEFAULT NULL,
   `drop_location` varchar(100) DEFAULT NULL,
+  `driver_name` varchar(100) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
