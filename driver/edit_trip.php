@@ -1,6 +1,6 @@
 <?php
 session_start();
-include('uder_index.php');
+include('driver_index.php');
 include('../config.php');
 
 if (!isset($_GET['id'])) {
@@ -8,11 +8,11 @@ if (!isset($_GET['id'])) {
     exit;
 }
 
-$car_id = $_GET['id'];
-$user_id = $_SESSION['user_id'] ?? 0;
+$car_id = (int)$_GET['id'];
+$driver_id = isset($_SESSION['driver_id']) ? (int)$_SESSION['driver_id'] : 0;
 
-// Fetch the existing trip data
-$query = "SELECT * FROM cars WHERE car_id = $car_id AND user_id = $user_id";
+// Fetch the existing trip data (owned by this driver)
+$query = "SELECT * FROM cars WHERE car_id = $car_id AND user_id = $driver_id";
 $result = mysqli_query($conn, $query);
 
 if (mysqli_num_rows($result) == 0) {

@@ -28,7 +28,7 @@ $where = !empty($conditions) ? 'WHERE ' . implode(' AND ', $conditions) : '';
 $query = "
     SELECT 
         c.*, COALESCE(c.driver_name, d.name) AS driver_name,
-        COALESCE(SUM(CASE WHEN UPPER(p.payment_status) = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS booked_seats
+        COALESCE(SUM(CASE WHEN UPPER(p.payment_status) = 'SUCCESS' AND (p.ride_status IN ('pending','active')) THEN 1 ELSE 0 END), 0) AS booked_seats
     FROM 
         cars c
     LEFT JOIN drivers d ON d.id = c.user_id

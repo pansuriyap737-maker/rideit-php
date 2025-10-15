@@ -204,8 +204,8 @@ if ($cntRes) {
                             <td><?php echo $car['date_time'] ? date('d/m/Y H:i', strtotime($car['date_time'])) : ''; ?></td>
                             <td>₹<?php echo number_format($car['amount'], 2); ?></td>
                             <td>
-                                <a class="edit-btn-rides" href="edit_car.php?id=<?php echo (int)$car['car_id']; ?>">Edit</a>
-                                <a class="delete-btn-rides" href="delete_car.php?id=<?php echo (int)$car['car_id']; ?>" onclick="return confirm('Delete this trip?');">Delete</a>
+                                <a class="edit-btn-rides" href="edit_trip.php?id=<?php echo (int)$car['car_id']; ?>">Edit</a>
+                                <a class="delete-btn-rides" href="delete_trip.php?id=<?php echo (int)$car['car_id']; ?>" onclick="return confirm('Delete this trip?');">Delete</a>
                             </td>
                         </tr>
                     <?php endwhile; ?>

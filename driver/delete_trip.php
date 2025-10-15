@@ -10,22 +10,20 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     mysqli_begin_transaction($conn);
 
     try {
-        // First, delete the payments associated with this car_id
-        $delete_payments_query = "DELETE FROM payments WHERE car_id = $car_id";
-        mysqli_query($conn, $delete_payments_query);
-        
+        // First, delete dependent rows to satisfy FKs
+        mysqli_query($conn, "DELETE FROM bookings WHERE car_id = $car_id");
+        mysqli_query($conn, "DELETE FROM payments WHERE car_id = $car_id");
+
         // Then, delete the car
-        $delete_car_query = "DELETE FROM cars WHERE car_id = $car_id";
-        mysqli_query($conn, $delete_car_query);
+        mysqli_query($conn, "DELETE FROM cars WHERE car_id = $car_id");
 
         // Commit the transaction
         mysqli_commit($conn);
-        
-        echo "<script>alert('Trip and associated payments deleted successfully!'); window.location.href = 'add_trip.php';</script>";
+        echo "<script>alert('Trip deleted successfully!'); window.location.href = 'add_trip.php';</script>";
     } catch (Exception $e) {
         // If any error occurs, rollback the transaction
-        mysqli_roll_back($conn);
-        echo "<script>alert('Error deleting trip: " . $e->getMessage() . "');</script>";
+        mysqli_rollback($conn);
+        echo "<script>alert('Error deleting trip.'); window.location.href = 'add_trip.php';</script>";
     }
 } else {
     echo "<script>alert('Invalid car ID.'); window.location.href = 'add_trip.php';</script>";

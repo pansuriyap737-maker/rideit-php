@@ -174,7 +174,21 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
 </head>
 <body>
     <div class="payment-container">
-        <h1 id="payment-heading">My Bookings</h1>
+        <div style="display:flex; align-items:center; width:90%;">
+            <h1 id="payment-heading" style="margin-right:auto;">My Bookings</h1>
+            <div style="display:flex; gap:8px;">
+                <a href="user_payment.php?view=active"><button style="padding:8px 12px; border:2px solid #6a0fe0; color:#6a0fe0; border-radius:8px; background: <?= $view==='active' ? '#f3e9ff' : '#fff' ?>;">Active</button></a>
+                <a href="user_payment.php?view=completed"><button style="padding:8px 12px; border:2px solid green; color:green; border-radius:8px; background: <?= $view==='completed' ? '#e9f8ec' : '#fff' ?>;">Completed</button></a>
+                <a href="user_payment.php?view=canceled"><button style="padding:8px 12px; border:2px solid #c00; color:#c00; border-radius:8px; background: <?= $view==='canceled' ? '#fdecec' : '#fff' ?>;">Canceled</button></a>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:20px; width:90%; margin:10px auto;">
+            <div style="flex:1; background:#fff; padding:12px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);">Total Trips Completed: <b><?= (int)($totals['total_trips'] ?? 0) ?></b></div>
+            <div style="flex:1; background:#fff; padding:12px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);">Total Amount Paid: <b>₹<?= number_format((float)($totals['total_amount'] ?? 0), 2) ?></b></div>
+        </div>
+
+        <?php if ($view === 'active'): ?>
         <table class="userpanel-tabel">
             <tr>
                 <th class="user-payment">Full Name (Driver)</th>
@@ -182,7 +196,6 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
                 <th class="user-payment">Pick-up</th>
                 <th class="user-payment">Drop</th>
                 <th class="user-payment">Amount</th>
-                <th class="user-payment">Phone No.</th>
                 <th class="user-payment">Payment Mode</th>
                 <th class="user-payment">Action</th>
             </tr>
@@ -194,15 +207,70 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
                         <td class="user-ride-data"><?= htmlspecialchars($row['pickup']) ?></td>
                         <td class="user-ride-data"><?= htmlspecialchars($row['drop_location']) ?></td>
                         <td class="user-ride-data">₹<?= number_format($row['amount'], 2) ?></td>
-                        <td class="user-ride-data">7862893655</td>
-                        <td class="user-ride-data">COD/ONLINE</td>
-                        <td class="user-ride-data"><button class="cancel-passenger">Cancel</button></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['payment_mode']) ?></td>
+                        <td class="user-ride-data">
+                            <form method="POST" action="ride_cancel.php" style="margin:0;">
+                                <input type="hidden" name="payment_id" value="<?= (int)$row['payment_id'] ?>">
+                                <button class="cancel-passenger" type="submit">Cancel</button>
+                            </form>
+                        </td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>
                 <tr><td colspan="7" class="user-ride-data">No bookings found.</td></tr>
             <?php endif; ?>
         </table>
+        <?php elseif ($view === 'completed'): ?>
+        <table class="userpanel-tabel">
+            <tr>
+                <th class="user-payment">Full Name (Driver)</th>
+                <th class="user-payment">Car No. Plate</th>
+                <th class="user-payment">Pick-up</th>
+                <th class="user-payment">Drop</th>
+                <th class="user-payment">Amount</th>
+                <th class="user-payment">Payment Mode</th>
+            </tr>
+            <?php if ($completedRes && mysqli_num_rows($completedRes) > 0): ?>
+                <?php while ($row = mysqli_fetch_assoc($completedRes)): ?>
+                    <tr>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['driver_name']) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['car_number_plate']) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['pickup']) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['drop_location']) ?></td>
+                        <td class="user-ride-data">₹<?= number_format($row['amount'], 2) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['payment_mode']) ?></td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="6" class="user-ride-data">No completed bookings.</td></tr>
+            <?php endif; ?>
+        </table>
+        <?php else: ?>
+        <table class="userpanel-tabel">
+            <tr>
+                <th class="user-payment">Full Name (Driver)</th>
+                <th class="user-payment">Car No. Plate</th>
+                <th class="user-payment">Pick-up</th>
+                <th class="user-payment">Drop</th>
+                <th class="user-payment">Amount</th>
+                <th class="user-payment">Payment Mode</th>
+            </tr>
+            <?php if ($canceledRes && mysqli_num_rows($canceledRes) > 0): ?>
+                <?php while ($row = mysqli_fetch_assoc($canceledRes)): ?>
+                    <tr>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['driver_name']) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['car_number_plate']) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['pickup']) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['drop_location']) ?></td>
+                        <td class="user-ride-data">₹<?= number_format($row['amount'], 2) ?></td>
+                        <td class="user-ride-data"><?= htmlspecialchars($row['payment_mode']) ?></td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="6" class="user-ride-data">No canceled bookings.</td></tr>
+            <?php endif; ?>
+        </table>
+        <?php endif; ?>
     </div>
 
        <div class="custom-footer">
