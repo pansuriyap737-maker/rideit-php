@@ -2,6 +2,43 @@
 session_start();
 include('../config.php'); // Assuming this has your database connection
 include('admin_header.php');
+
+// Fetch completed trip payments from database
+$query = "SELECT 
+    p.payment_id,
+    p.passenger_name,
+    p.driver_name,
+    c.car_name,
+    p.car_number_plate,
+    p.payment_mode,
+    p.amount,
+    p.payment_status,
+    p.payment_date,
+    p.ride_datetime,
+    p.pickup,
+    p.drop_location,
+    p.ride_status
+FROM payments p 
+LEFT JOIN cars c ON p.car_id = c.car_id 
+WHERE p.ride_status = 'completed' 
+ORDER BY p.payment_date DESC";
+
+$result = mysqli_query($conn, $query);
+$payments = [];
+if ($result) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $payments[] = $row;
+    }
+}
+
+// Calculate total payments
+$total_query = "SELECT SUM(amount) as total_amount FROM payments WHERE ride_status = 'completed'";
+$total_result = mysqli_query($conn, $total_query);
+$total_amount = 0;
+if ($total_result) {
+    $total_row = mysqli_fetch_assoc($total_result);
+    $total_amount = $total_row['total_amount'] ?? 0;
+}
 ?>
 
 <!DOCTYPE html>
@@ -50,21 +87,22 @@ include('admin_header.php');
         }
 
         .payments-table {
-            width: 80%;
+            width: 95%;
             border-collapse: collapse;
             background-color: #fff;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
             margin: 0 auto;
+            font-size: 12px;
         }
 
         .payments-table th,
         .payments-table td {
-            padding: 12px 15px;
+            padding: 8px 6px;
             text-align: center;
             border-bottom: 1px solid #eee;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .payments-table th {
@@ -108,31 +146,63 @@ include('admin_header.php');
             <form class="search-form" onsubmit="return false;">
                 <input
                     type="text"
-                    placeholder="Search by user, car, plate, payment ID, status"
+                    placeholder="Search by payment ID, passenger, driver, car, plate, amount, status, location"
                     id="search-input"
                     class="search-input"
                 />
                 <button type="button" onclick="filterPayments()" class="search-button">Search</button>
             </form>
 
+            <div style="margin-bottom: 20px; text-align: center;">
+                <h3 style="color: #28a745; font-size: 24px;">
+                    Total Completed Trip Revenue: ₹<?php echo number_format($total_amount, 2); ?>
+                </h3>
+            </div>
+
             <table class="payments-table" id="payments-table">
                 <thead>
                     <tr>
-                        <th>Full Name(Passanger)</th>
-                        <th>Full Name(Driver)</th>
+                        <th>Payment ID</th>
+                        <th>Passenger Name</th>
+                        <th>Driver Name</th>
                         <th>Car Name</th>
                         <th>Number Plate</th>
                         <th>Payment Mode</th>
+                        <th>Amount</th>
+                        <th>Payment Status</th>
+                        <th>Payment Date</th>
+                        <th>Ride Date</th>
+                        <th>Pickup Location</th>
+                        <th>Drop Location</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <?php if (!empty($payments)): ?>
+                        <?php foreach ($payments as $payment): ?>
                             <tr>
-                                <td>Keyur Dhaduk</td>
-                                <td>Ronit Kakadiya</td>
-                                <td>Hyundai</td>
-                                <td>ABK-JKN</td>
-                                <td>Online</td>  <!-- Assuming payment mode is static; adjust if dynamic -->
+                                <td><?php echo htmlspecialchars($payment['payment_id']); ?></td>
+                                <td><?php echo htmlspecialchars($payment['passenger_name'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($payment['driver_name'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($payment['car_name'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($payment['car_number_plate'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($payment['payment_mode'] ?? 'N/A'); ?></td>
+                                <td>₹<?php echo number_format($payment['amount'], 2); ?></td>
+                                <td>
+                                    <span style="color: <?php echo $payment['payment_status'] === 'Success' ? '#28a745' : '#dc3545'; ?>; font-weight: bold;">
+                                        <?php echo htmlspecialchars($payment['payment_status'] ?? 'N/A'); ?>
+                                    </span>
+                                </td>
+                                <td><?php echo date('Y-m-d H:i', strtotime($payment['payment_date'])); ?></td>
+                                <td><?php echo $payment['ride_datetime'] ? date('Y-m-d H:i', strtotime($payment['ride_datetime'])) : 'N/A'; ?></td>
+                                <td><?php echo htmlspecialchars($payment['pickup'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($payment['drop_location'] ?? 'N/A'); ?></td>
                             </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="12" class="no-results">No completed trips found.</td>
+                        </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </center>
@@ -140,7 +210,7 @@ include('admin_header.php');
 
     <script>
         function filterPayments() {
-            var input, filter, table, tr, td, i, j;
+            var input, filter, table, tr, td, i, j, txtValue;
             input = document.getElementById("search-input");
             filter = input.value.toLowerCase();
             table = document.getElementById("payments-table");
@@ -151,7 +221,8 @@ include('admin_header.php');
                 td = tr[i].getElementsByTagName("td");
                 for (j = 0; j < td.length; j++) {
                     if (td[j]) {
-                        if (td[j].textContent.toLowerCase().indexOf(filter) > -1) {
+                        txtValue = td[j].textContent || td[j].innerText;
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
                             tr[i].style.display = "";
                             break;
                         }
@@ -159,6 +230,9 @@ include('admin_header.php');
                 }
             }
         }
+
+        // Add real-time search functionality
+        document.getElementById("search-input").addEventListener("keyup", filterPayments);
     </script>
 </body>
 </html>
