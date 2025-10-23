@@ -127,7 +127,7 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
         .btn { padding:8px 12px; border-radius:10px; border:2px solid #ccc; background:#fff; cursor:pointer; font-weight:600; }
         .btn.active { border-color:#6a0fe0; color:#6a0fe0; background:#f3e9ff; }
 
-        .metrics { display:flex; gap:20px; width:100%; margin:10px 0 20px; }
+        .metrics { display:flex; gap:20px; width:100%; margin:30px 0 20px 0; }
         .metric-card { flex:1; background:#fff; padding:12px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.06); }
         .card { background:#fff; padding:18px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.06); width:100%; }
 
@@ -137,6 +137,13 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
 <body>
     <div class="payment-container">
         <div class="wrap">
+            
+
+            <div class="metrics">
+                <div class="metric-card">Total Trips Completed: <b><?= (int)($totals['total_trips'] ?? 0) ?></b></div>
+                <div class="metric-card">Total Amount Paid: <b>₹<?= number_format((float)($totals['total_amount'] ?? 0), 2) ?></b></div>
+            </div>
+
             <div class="toolbar">
                 <h1 id="payment-heading">My Bookings</h1>
                 <div class="filters">
@@ -144,11 +151,6 @@ $totals = mysqli_fetch_assoc(mysqli_query($conn, $totalsSql));
                     <a href="user_payment.php?view=completed"><button class="btn <?= $view==='completed' ? 'active' : '' ?>">Completed</button></a>
                     <a href="user_payment.php?view=canceled"><button class="btn <?= $view==='canceled' ? 'active' : '' ?>">Canceled</button></a>
                 </div>
-            </div>
-
-            <div class="metrics">
-                <div class="metric-card">Total Trips Completed: <b><?= (int)($totals['total_trips'] ?? 0) ?></b></div>
-                <div class="metric-card">Total Amount Paid: <b>₹<?= number_format((float)($totals['total_amount'] ?? 0), 2) ?></b></div>
             </div>
 
         <?php if ($view === 'active'): ?>
