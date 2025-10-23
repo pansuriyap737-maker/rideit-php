@@ -6,20 +6,61 @@ include('../config.php'); // Assuming this has your database connection
 <?php
 $driverId = isset($_SESSION['driver_id']) ? (int)$_SESSION['driver_id'] : 0;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$where = "WHERE c.user_id = $driverId";
+
+// First, delete cars with past dates automatically
+$deletePastCars = "DELETE FROM cars WHERE user_id = $driverId AND date_time < NOW()";
+$deleteResult = mysqli_query($conn, $deletePastCars);
+
+// Debug: Check what cars exist before filtering
+$debugQuery = "SELECT car_id, car_name, date_time, seating FROM cars WHERE user_id = $driverId";
+$debugResult = mysqli_query($conn, $debugQuery);
+
+// Build the main query to show only cars with available seats and future dates
+$where = "WHERE c.user_id = $driverId AND c.date_time > NOW()";
+
 if ($search !== '') {
 	$safe = mysqli_real_escape_string($conn, $search);
 	$like = "%$safe%";
 	$where .= " AND (c.car_name LIKE '" . $like . "' OR c.number_plate LIKE '" . $like . "' OR c.pickup_location LIKE '" . $like . "' OR c.drop_location LIKE '" . $like . "')";
 }
-$sql = "SELECT c.* FROM cars c $where ORDER BY c.date_time DESC";
-$cars = mysqli_query($conn, $sql);
-// Count total cars for this driver
+
+// Simplified approach - get all cars first, then filter in PHP
+$allCarsQuery = "SELECT c.* FROM cars c WHERE c.user_id = $driverId ORDER BY c.date_time DESC";
+$allCarsResult = mysqli_query($conn, $allCarsQuery);
+
+$cars = [];
 $totalCars = 0;
-$cntRes = mysqli_query($conn, "SELECT COUNT(*) AS cnt FROM cars WHERE user_id = $driverId");
-if ($cntRes) {
-    $cntRow = mysqli_fetch_assoc($cntRes);
-    $totalCars = (int)$cntRow['cnt'];
+
+if ($allCarsResult) {
+    while ($car = mysqli_fetch_assoc($allCarsResult)) {
+        // Check if car date is in the past
+        if ($car['date_time'] && strtotime($car['date_time']) < time()) {
+            // Delete past cars
+            $deleteCar = "DELETE FROM cars WHERE car_id = " . (int)$car['car_id'];
+            mysqli_query($conn, $deleteCar);
+            continue; // Skip this car
+        }
+        
+        // Check if car is fully booked
+        $bookingsQuery = "
+            SELECT COUNT(*) as booked_count 
+            FROM payments p 
+            WHERE p.car_id = " . (int)$car['car_id'] . " 
+            AND UPPER(p.payment_status) = 'SUCCESS'
+        ";
+        $bookingsResult = mysqli_query($conn, $bookingsQuery);
+        $bookedSeats = 0;
+        if ($bookingsResult && $bookingRow = mysqli_fetch_assoc($bookingsResult)) {
+            $bookedSeats = (int)$bookingRow['booked_count'];
+        }
+        
+        // Only include cars with available seats
+        if ($car['seating'] > $bookedSeats) {
+            $car['booked_seats'] = $bookedSeats;
+            $cars[] = $car;
+            $totalCars++;
+        }
+    }
 }
 ?>
 
@@ -165,6 +206,20 @@ if ($cntRes) {
 <body>
     <div class="ride-list-container">
         <h3 id="ride-list-heading">Car List (Total: <?php echo $totalCars; ?>)</h3>
+        
+        <!-- Debug information -->
+        <div style="background: #f8f9fa; padding: 10px; margin-bottom: 15px; border-radius: 5px; font-size: 12px;">
+            <strong>Debug Info:</strong><br>
+            Driver ID: <?php echo $driverId; ?><br>
+            Current Time: <?php echo date('Y-m-d H:i:s'); ?><br>
+            <?php if ($debugResult): ?>
+                All Cars for Driver: <?php echo mysqli_num_rows($debugResult); ?><br>
+                <?php while ($debugCar = mysqli_fetch_assoc($debugResult)): ?>
+                    Car ID: <?php echo $debugCar['car_id']; ?> - <?php echo $debugCar['car_name']; ?> - Date: <?php echo $debugCar['date_time']; ?> - Seats: <?php echo $debugCar['seating']; ?><br>
+                <?php endwhile; ?>
+            <?php endif; ?>
+        </div>
+        
         <form method="get" style="margin-bottom: 15px;">
             <input type="search" placeholder="Search by Location, Number Plate and Car Name" class="ride-search"
                 id="search-input" name="search" value="<?php echo htmlspecialchars($search); ?>" />
@@ -178,6 +233,7 @@ if ($cntRes) {
                     <th>Car Name</th>
                     <th>Number Plate</th>
                     <th>Seating Capacity</th>
+                    <th>Available Seats</th>
                     <th>Pickup</th>
                     <th>Drop</th>
                     <th>Booking DateTime</th>
@@ -186,8 +242,8 @@ if ($cntRes) {
                 </tr>
             </thead>
             <tbody>
-                <?php if ($cars && mysqli_num_rows($cars) > 0): ?>
-                    <?php while ($car = mysqli_fetch_assoc($cars)): ?>
+                <?php if (!empty($cars)): ?>
+                    <?php foreach ($cars as $car): ?>
                         <tr>
                             <td>
                                 <?php if (!empty($car['car_image'])): ?>
@@ -199,6 +255,11 @@ if ($cntRes) {
                             <td><?php echo htmlspecialchars($car['car_name']); ?></td>
                             <td><?php echo htmlspecialchars($car['number_plate']); ?></td>
                             <td><?php echo htmlspecialchars($car['seating']); ?></td>
+                            <td>
+                                <strong style="color: <?php echo ($car['seating'] - $car['booked_seats']) > 0 ? '#28a745' : '#dc3545'; ?>;">
+                                    <?php echo ($car['seating'] - $car['booked_seats']); ?>
+                                </strong>
+                            </td>
                             <td><?php echo htmlspecialchars($car['pickup_location']); ?></td>
                             <td><?php echo htmlspecialchars($car['drop_location']); ?></td>
                             <td><?php echo $car['date_time'] ? date('d/m/Y H:i', strtotime($car['date_time'])) : ''; ?></td>
@@ -208,9 +269,9 @@ if ($cntRes) {
                                 <a class="delete-btn-rides" href="delete_trip.php?id=<?php echo (int)$car['car_id']; ?>" onclick="return confirm('Delete this trip?');">Delete</a>
                             </td>
                         </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="9" class="no-cars">No trips found.</td></tr>
+                    <tr><td colspan="10" class="no-cars">No available trips found.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

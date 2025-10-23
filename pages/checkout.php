@@ -11,7 +11,6 @@ $userId = (int)$_SESSION['user_id'];
 $carId = isset($_GET['car_id']) ? (int)$_GET['car_id'] : 0;
 
 // Fetch car details
-
 $car = null;
 if ($carId > 0) {
 	$res = mysqli_query($conn, "SELECT c.car_id, c.car_name, c.amount, c.number_plate, c.pickup_location, c.drop_location, c.date_time, COALESCE(c.driver_name, d.name) AS driver_name FROM cars c LEFT JOIN drivers d ON d.id = c.user_id WHERE c.car_id = $carId");
@@ -150,6 +149,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		exit;
 	}
 }
+
+// Include header after all PHP processing is done
+include('uder_index.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">

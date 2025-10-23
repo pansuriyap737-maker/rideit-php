@@ -8,43 +8,74 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$userId = $_SESSION['user_id'];
+$userId = (int)$_SESSION['user_id'];
 $success = "";
 $error = "";
 
 // Handle profile update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_profile'])) {
-    $newName = mysqli_real_escape_string($conn, trim($_POST['name']));
-    $newEmail = mysqli_real_escape_string($conn, trim($_POST['email']));
-
-    $updateSql = "UPDATE pessanger SET name='$newName', email='$newEmail' WHERE id=$userId";
-    if (mysqli_query($conn, $updateSql)) {
-        $success = "Profile updated successfully!";
+    $newName = trim($_POST['name'] ?? '');
+    $newEmail = trim($_POST['email'] ?? '');
+    
+    // Validation
+    if (empty($newName)) {
+        $error = "Name is required.";
+    } elseif (strlen($newName) < 2) {
+        $error = "Name must be at least 2 characters long.";
+    } elseif (empty($newEmail)) {
+        $error = "Email is required.";
+    } elseif (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
     } else {
-        $error = "Failed to update profile.";
+        $newName = mysqli_real_escape_string($conn, $newName);
+        $newEmail = mysqli_real_escape_string($conn, $newEmail);
+
+        $updateSql = "UPDATE pessanger SET name='$newName', email='$newEmail' WHERE id=$userId";
+        if (mysqli_query($conn, $updateSql)) {
+            $success = "Profile updated successfully!";
+            // Update session if name changed
+            if (isset($_SESSION['user_name'])) {
+                $_SESSION['user_name'] = $newName;
+            }
+        } else {
+            $error = "Failed to update profile: " . mysqli_error($conn);
+        }
     }
 }
 
 // Handle password update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_password'])) {
-    $currentPassword = trim($_POST['current_password']);
-    $newPassword = trim($_POST['new_password']);
-    $confirmPassword = trim($_POST['confirm_password']);
+    $currentPassword = trim($_POST['current_password'] ?? '');
+    $newPassword = trim($_POST['new_password'] ?? '');
+    $confirmPassword = trim($_POST['confirm_password'] ?? '');
 
-    $fetchUser = mysqli_query($conn, "SELECT password FROM pessanger WHERE id=$userId");
-    $userData = mysqli_fetch_assoc($fetchUser);
-
-    if (!password_verify($currentPassword, $userData['password'])) {
-        $error = "Current password is incorrect.";
+    // Validation
+    if (empty($currentPassword)) {
+        $error = "Current password is required.";
+    } elseif (empty($newPassword)) {
+        $error = "New password is required.";
+    } elseif (strlen($newPassword) < 6) {
+        $error = "New password must be at least 6 characters long.";
     } elseif ($newPassword !== $confirmPassword) {
         $error = "New passwords do not match.";
     } else {
-        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-        $updatePwdSql = "UPDATE pessanger SET password='$hashedPassword' WHERE id=$userId";
-        if (mysqli_query($conn, $updatePwdSql)) {
-            $success = "Password updated successfully!";
+        $fetchUser = mysqli_query($conn, "SELECT password FROM pessanger WHERE id=$userId");
+        if (!$fetchUser) {
+            $error = "Database error occurred.";
         } else {
-            $error = "Failed to update password.";
+            $userData = mysqli_fetch_assoc($fetchUser);
+            
+            if (!password_verify($currentPassword, $userData['password'])) {
+                $error = "Current password is incorrect.";
+            } else {
+                $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+                $updatePwdSql = "UPDATE pessanger SET password='$hashedPassword' WHERE id=$userId";
+                if (mysqli_query($conn, $updatePwdSql)) {
+                    $success = "Password updated successfully!";
+                } else {
+                    $error = "Failed to update password: " . mysqli_error($conn);
+                }
+            }
         }
     }
 }
@@ -144,6 +175,17 @@ $user = mysqli_fetch_assoc($result);
             border-radius: 10px;
             margin-bottom: 10px;
             /* Ensure space between inputs */
+            transition: border-color 0.3s ease;
+        }
+
+        #update-name:focus,
+        #update-email:focus,
+        #current-password:focus,
+        #new-password:focus,
+        #confirm-new-password:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
         }
 
         .password-update {
@@ -200,6 +242,21 @@ $user = mysqli_fetch_assoc($result);
             padding: 15px 0;
             margin-top: 40px;
         }
+
+        /* Form separation styling */
+        .profile-update {
+            border: 2px solid #e9ecef;
+        }
+
+        .password-update {
+            border: 2px solid #e9ecef;
+        }
+
+        .profile-update:hover,
+        .password-update:hover {
+            border-color: #007bff;
+            transition: border-color 0.3s ease;
+        }
     </style>
 </head>
 
@@ -214,10 +271,10 @@ $user = mysqli_fetch_assoc($result);
                     <div class="error"><?php echo $error; ?></div><?php endif; ?>
                 <form method="POST">
                     <input type="hidden" name="update_profile" value="1">
-                    <label htmlFor="update-name">Name:</label>
+                    <label for="update-name">Name:</label>
                     <input type="text" id="update-name" name="name"
                         value="<?php echo htmlspecialchars($user['name']); ?>" maxlength="12" required>
-                    <label htmlFor="update-email">Email:</label>
+                    <label for="update-email">Email:</label>
                     <input type="email" id="update-email" name="email"
                         value="<?php echo htmlspecialchars($user['email']); ?>" required>
                     <button type="submit" id="update-btn">Update Profile</button>
@@ -232,11 +289,11 @@ $user = mysqli_fetch_assoc($result);
                     <div class="error"><?php echo $error; ?></div><?php endif; ?>
                 <form method="POST">
                     <input type="hidden" name="update_password" value="1">
-                    <label htmlFor="current-password">Current Password:</label>
+                    <label for="current-password">Current Password:</label>
                     <input type="password" id="current-password" name="current_password" required>
-                    <label htmlFor="new-password">New Password:</label>
+                    <label for="new-password">New Password:</label>
                     <input type="password" id="new-password" name="new_password" required>
-                    <label htmlFor="confirm-new-password">Confirm New Password:</label>
+                    <label for="confirm-new-password">Confirm New Password:</label>
                     <input type="password" id="confirm-new-password" name="confirm_password" required>
                     <button type="submit" id="update-btn">Update Password</button>
                 </form>
@@ -247,5 +304,77 @@ $user = mysqli_fetch_assoc($result);
     <div class="custom-footer">
     <?php include('../includes/footer.php'); ?>
 </div>
-</body>
-</html>
+
+<script>
+// Client-side form validation
+document.addEventListener('DOMContentLoaded', function() {
+    // Email validation function
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    // Profile form validation - only validates profile form
+    const profileForm = document.querySelector('form input[name="update_profile"]').closest('form');
+    if (profileForm) {
+        profileForm.addEventListener('submit', function(e) {
+            const name = document.getElementById('update-name').value.trim();
+            const email = document.getElementById('update-email').value.trim();
+            
+            if (name.length < 2) {
+                alert('Name must be at least 2 characters long.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!isValidEmail(email)) {
+                alert('Please enter a valid email address.');
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+    
+    // Password form validation - only validates password form
+    const passwordForm = document.querySelector('form input[name="update_password"]').closest('form');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', function(e) {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-new-password').value;
+            
+            if (currentPassword.length === 0) {
+                alert('Current password is required.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('New password must be at least 6 characters long.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match.');
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+    
+    // Real-time password confirmation validation
+    const confirmPasswordField = document.getElementById('confirm-new-password');
+    const newPasswordField = document.getElementById('new-password');
+    
+    if (confirmPasswordField && newPasswordField) {
+        confirmPasswordField.addEventListener('input', function() {
+            if (this.value !== newPasswordField.value) {
+                this.style.borderColor = '#dc3545';
+            } else {
+                this.style.borderColor = '#28a745';
+            }
+        });
+    }
+});
+</script>

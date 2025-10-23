@@ -11,7 +11,131 @@ if (!isset($_SESSION['user_id'])) {
 
 $userName = $_SESSION['user_name'];
 
+// Fetch total number of available rides (cars with available seats)
+$simpleQuery = "
+    SELECT c.car_id, c.seating,
+           COALESCE(SUM(CASE WHEN UPPER(p.payment_status) = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS booked_seats
+    FROM cars c
+    LEFT JOIN drivers d ON d.id = c.user_id
+    LEFT JOIN payments p ON c.car_id = p.car_id
+    WHERE c.date_time > NOW()
+    GROUP BY c.car_id
+    HAVING c.seating > booked_seats
+";
 
+$simpleResult = mysqli_query($conn, $simpleQuery);
+$totalAvailableCars = 0;
+if ($simpleResult) {
+    $totalAvailableCars = mysqli_num_rows($simpleResult);
+} else {
+    // Fallback query if the complex query fails
+    $fallbackQuery = "SELECT COUNT(*) as total_cars FROM cars WHERE date_time > NOW()";
+    $fallbackResult = mysqli_query($conn, $fallbackQuery);
+    if ($fallbackResult && $row = mysqli_fetch_assoc($fallbackResult)) {
+        $totalAvailableCars = $row['total_cars'];
+    }
+}
+
+// If still 0, try even simpler approach
+if ($totalAvailableCars == 0) {
+    $simpleCountQuery = "SELECT COUNT(*) as total_cars FROM cars";
+    $simpleCountResult = mysqli_query($conn, $simpleCountQuery);
+    if ($simpleCountResult && $row = mysqli_fetch_assoc($simpleCountResult)) {
+        $totalAvailableCars = $row['total_cars'];
+    }
+}
+
+// Cities covered - static value as requested
+$totalCities = 20;
+
+// Fetch user's total trips (bookings) - fixed query to handle both pessanger and users tables
+$userId = (int)$_SESSION['user_id'];
+
+// First try to find trips in payments table with direct user_id match
+$userTripsQuery = "
+    SELECT COUNT(*) as total_trips 
+    FROM payments p 
+    WHERE p.user_id = $userId 
+    AND UPPER(p.payment_status) = 'SUCCESS'
+    AND p.ride_status = 'completed'
+";
+$userTripsResult = mysqli_query($conn, $userTripsQuery);
+$userTrips = 0;
+if ($userTripsResult && $row = mysqli_fetch_assoc($userTripsResult)) {
+    $userTrips = $row['total_trips'];
+}
+
+// If no trips found, try to find by mapping pessanger to users table
+if ($userTrips == 0) {
+    // Get user's email from pessanger table
+    $pessangerQuery = "SELECT email FROM pessanger WHERE id = $userId";
+    $pessangerResult = mysqli_query($conn, $pessangerQuery);
+    
+    if ($pessangerResult && $pessangerRow = mysqli_fetch_assoc($pessangerResult)) {
+        $userEmail = mysqli_real_escape_string($conn, $pessangerRow['email']);
+        
+        // Find corresponding user in users table
+        $usersQuery = "SELECT id FROM users WHERE email = '$userEmail'";
+        $usersResult = mysqli_query($conn, $usersQuery);
+        
+        if ($usersResult && $usersRow = mysqli_fetch_assoc($usersResult)) {
+            $mappedUserId = $usersRow['id'];
+            
+            // Count trips for the mapped user - ONLY completed rides
+            $mappedTripsQuery = "
+                SELECT COUNT(*) as total_trips 
+                FROM payments p 
+                WHERE p.user_id = $mappedUserId 
+                AND UPPER(p.payment_status) = 'SUCCESS'
+                AND p.ride_status = 'completed'
+            ";
+            $mappedTripsResult = mysqli_query($conn, $mappedTripsQuery);
+            if ($mappedTripsResult && $mappedRow = mysqli_fetch_assoc($mappedTripsResult)) {
+                $userTrips = $mappedRow['total_trips'];
+            }
+        }
+    }
+}
+
+// If still 0, try a more comprehensive approach - check all payments for this user's email
+if ($userTrips == 0) {
+    // Get user info from pessanger table
+    $pessangerInfoQuery = "SELECT name, email FROM pessanger WHERE id = $userId";
+    $pessangerInfoResult = mysqli_query($conn, $pessangerInfoQuery);
+    
+    if ($pessangerInfoResult && $pessangerInfoRow = mysqli_fetch_assoc($pessangerInfoResult)) {
+        $userEmail = mysqli_real_escape_string($conn, $pessangerInfoRow['email']);
+        $userName = mysqli_real_escape_string($conn, $pessangerInfoRow['name']);
+        
+        // Try to find payments by passenger name or email in denormalized fields - ONLY completed rides
+        $denormalizedQuery = "
+            SELECT COUNT(*) as total_trips 
+            FROM payments p 
+            WHERE (p.passenger_name = '$userName' OR p.passenger_name LIKE '%$userName%')
+            AND UPPER(p.payment_status) = 'SUCCESS'
+            AND p.ride_status = 'completed'
+        ";
+        $denormalizedResult = mysqli_query($conn, $denormalizedQuery);
+        if ($denormalizedResult && $denormalizedRow = mysqli_fetch_assoc($denormalizedResult)) {
+            $userTrips = $denormalizedRow['total_trips'];
+        }
+    }
+}
+
+// If still 0 and ride_status might be NULL, try without ride_status filter
+if ($userTrips == 0) {
+    // Try without ride_status filter in case it's NULL
+    $fallbackTripsQuery = "
+        SELECT COUNT(*) as total_trips 
+        FROM payments p 
+        WHERE p.user_id = $userId 
+        AND UPPER(p.payment_status) = 'SUCCESS'
+    ";
+    $fallbackTripsResult = mysqli_query($conn, $fallbackTripsQuery);
+    if ($fallbackTripsResult && $fallbackRow = mysqli_fetch_assoc($fallbackTripsResult)) {
+        $userTrips = $fallbackRow['total_trips'];
+    }
+}
 
 ?>
 
@@ -45,16 +169,16 @@ $userName = $_SESSION['user_name'];
 
     <div class="metric-row">
         <div class="metric">
-            <div class="title">Total Cars</div>
-            <div class="value">52</div>
+            <div class="title">Available Rides</div>
+            <div class="value"><?php echo $totalAvailableCars; ?></div>
         </div>
         <div class="metric">
             <div class="title">Cities Covered</div>
-            <div class="value">20</div>
+            <div class="value"><?php echo $totalCities; ?></div>
         </div>
         <div class="metric">
             <div class="title">Your Trips</div>
-            <div class="value">7</div>
+            <div class="value"><?php echo $userTrips; ?></div>
         </div>
     </div>
 
