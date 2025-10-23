@@ -9,22 +9,9 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 // First, delete cars with past dates automatically
 $deletePastCars = "DELETE FROM cars WHERE user_id = $driverId AND date_time < NOW()";
-$deleteResult = mysqli_query($conn, $deletePastCars);
+mysqli_query($conn, $deletePastCars);
 
-// Debug: Check what cars exist before filtering
-$debugQuery = "SELECT car_id, car_name, date_time, seating FROM cars WHERE user_id = $driverId";
-$debugResult = mysqli_query($conn, $debugQuery);
-
-// Build the main query to show only cars with available seats and future dates
-$where = "WHERE c.user_id = $driverId AND c.date_time > NOW()";
-
-if ($search !== '') {
-	$safe = mysqli_real_escape_string($conn, $search);
-	$like = "%$safe%";
-	$where .= " AND (c.car_name LIKE '" . $like . "' OR c.number_plate LIKE '" . $like . "' OR c.pickup_location LIKE '" . $like . "' OR c.drop_location LIKE '" . $like . "')";
-}
-
-// Simplified approach - get all cars first, then filter in PHP
+// Get all cars for this driver
 $allCarsQuery = "SELECT c.* FROM cars c WHERE c.user_id = $driverId ORDER BY c.date_time DESC";
 $allCarsResult = mysqli_query($conn, $allCarsQuery);
 
@@ -33,12 +20,28 @@ $totalCars = 0;
 
 if ($allCarsResult) {
     while ($car = mysqli_fetch_assoc($allCarsResult)) {
-        // Check if car date is in the past
+        // Double-check if car date is in the past (in case the DELETE didn't catch it)
         if ($car['date_time'] && strtotime($car['date_time']) < time()) {
-            // Delete past cars
+            // Delete past cars immediately
             $deleteCar = "DELETE FROM cars WHERE car_id = " . (int)$car['car_id'];
             mysqli_query($conn, $deleteCar);
             continue; // Skip this car
+        }
+        
+        // Apply search filter if provided
+        if ($search !== '') {
+            $searchLower = strtolower($search);
+            $carName = strtolower($car['car_name']);
+            $numberPlate = strtolower($car['number_plate']);
+            $pickupLocation = strtolower($car['pickup_location']);
+            $dropLocation = strtolower($car['drop_location']);
+            
+            if (strpos($carName, $searchLower) === false && 
+                strpos($numberPlate, $searchLower) === false && 
+                strpos($pickupLocation, $searchLower) === false && 
+                strpos($dropLocation, $searchLower) === false) {
+                continue; // Skip this car if it doesn't match search
+            }
         }
         
         // Check if car is fully booked
@@ -54,7 +57,7 @@ if ($allCarsResult) {
             $bookedSeats = (int)$bookingRow['booked_count'];
         }
         
-        // Only include cars with available seats
+        // Only include cars with available seats (completely hide fully booked cars)
         if ($car['seating'] > $bookedSeats) {
             $car['booked_seats'] = $bookedSeats;
             $cars[] = $car;
@@ -205,20 +208,7 @@ if ($allCarsResult) {
 
 <body>
     <div class="ride-list-container">
-        <h3 id="ride-list-heading">Car List (Total: <?php echo $totalCars; ?>)</h3>
-        
-        <!-- Debug information -->
-        <div style="background: #f8f9fa; padding: 10px; margin-bottom: 15px; border-radius: 5px; font-size: 12px;">
-            <strong>Debug Info:</strong><br>
-            Driver ID: <?php echo $driverId; ?><br>
-            Current Time: <?php echo date('Y-m-d H:i:s'); ?><br>
-            <?php if ($debugResult): ?>
-                All Cars for Driver: <?php echo mysqli_num_rows($debugResult); ?><br>
-                <?php while ($debugCar = mysqli_fetch_assoc($debugResult)): ?>
-                    Car ID: <?php echo $debugCar['car_id']; ?> - <?php echo $debugCar['car_name']; ?> - Date: <?php echo $debugCar['date_time']; ?> - Seats: <?php echo $debugCar['seating']; ?><br>
-                <?php endwhile; ?>
-            <?php endif; ?>
-        </div>
+        <h3 id="ride-list-heading">Available Cars (Total: <?php echo $totalCars; ?>)</h3>
         
         <form method="get" style="margin-bottom: 15px;">
             <input type="search" placeholder="Search by Location, Number Plate and Car Name" class="ride-search"
